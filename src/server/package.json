@@ -1,0 +1,23 @@
+{
+  "name": "myqnode",
+  "version": "0.0.1",
+  "description": "Node agent for MyQ and SmartThings Edge",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "myq",
+    "node",
+    "smartthings"
+  ],
+  "author": "Brian Beaird",
+  "license": "ISC",
+  "dependencies": {
+    "@hjdhjd/myq": "^6.0.7",
+    "axios": "^0.27.2",
+    "express": "^4.18.1",
+    "node-ssdp": "^4.0.1"
+  }
+}

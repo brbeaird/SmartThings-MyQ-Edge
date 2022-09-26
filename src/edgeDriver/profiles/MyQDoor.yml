@@ -1,0 +1,17 @@
+name: MyQDoor.v1
+components:
+- id: main
+  capabilities:
+  - id: doorControl
+    version: 1
+  - id: refresh
+    version: 1
+  # - id: towertalent27877.lastActivity
+  #   version: 1
+  categories:
+  - name: GarageDoor
+metadata:
+  deviceType: GarageDoor
+  ocfDeviceType: oic.d.garagedoor
+  deviceTypeId: GarageDoor
+  mnmn: SmartThingsCommunity

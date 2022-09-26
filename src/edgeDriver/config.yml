@@ -1,0 +1,5 @@
+name: 'MyQ Door'
+packageKey: 'MyQDoor'
+permissions:
+  lan: {}
+  discovery: {}
