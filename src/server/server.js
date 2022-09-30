@@ -91,7 +91,7 @@ app.get('/details', (req, res) => {
     for (let device of myq.devices){
       if (device.device_family == 'garagedoor'){
         devArray.push({
-          name: `${device.name}-EDGE`,
+          name: device.name,
           baseUrl: `${require('ip').address()}:${port}`,
           vendor: 'MyQ',
           manufacturer: device.device_platform,

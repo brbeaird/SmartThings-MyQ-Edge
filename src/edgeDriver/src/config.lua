@@ -15,6 +15,6 @@ config.MSEARCH=table.concat({
   'MX: 4',
   'ST: urn:SmartThingsCommunity:device:MyQDoor'
 }, '\r\n')
-config.SCHEDULE_PERIOD_PING=30
+config.SCHEDULE_PERIOD_PING=60
 config.SCHEDULE_PERIOD_REFRESH=300
 return config
