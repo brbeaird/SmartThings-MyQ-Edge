@@ -35,8 +35,11 @@ This provides an integration between SmartThings and MyQ using a LAN bridge serv
  - The bridge server polls MyQ every 10 seconds to check the status of MyQ devices. If the status is detected to have changed since the last poll, an update will be sent to the Edge driver to instantly update the device in SmartThings. The Edge driver will also occasionally poll the bridge server to cover situations where an update is missed and things get out of sync.
 
 
+## Special Thanks
+Huge shoutout to hjdhjd and the work at [/hjdhjd/myq](https://github.com/hjdhjd/myq) for figuring all of this out from the MyQ side and sharing it out as an incredible library for Node.
 
-#### Donate/Sponsor:
+
+## Donate/Sponsor:
 
 If you love this integration, feel free to donate or check out the GitHub Sponsor program.
 
