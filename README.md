@@ -14,7 +14,7 @@ This provides an integration between SmartThings and MyQ using a LAN bridge serv
   - You should see your devices automatically added
   
 ## Running the bridge server with an executable
- - Find the executable [for your OS here](src/server/bin)
+ - Find the executable [for your OS here](https://github.com/brbeaird/SmartThings-MyQ-Edge/tree/main/src/server/bin)
  - Download it as well as the config.json file
  - Edit the config.json file to include your MyQ e-mail and password
  - Run the executable. After several seconds, you should see a message indicating a successful connection to MyQ.
