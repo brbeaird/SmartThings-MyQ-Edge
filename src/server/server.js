@@ -56,7 +56,6 @@ const setupMyQ = () => {
   }
 
   //All good. Send it
-  startSsdp();
   myq = new myQApi.myQApi(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
 
   refreshMyQ(true);
@@ -200,6 +199,7 @@ app.post('/:doorId/control', (req, res) => {
 let expressApp = app.listen(port, () => {
   port = expressApp.address().port
   log(`HTTP server listening on port ${port}`);
+  startSsdp();
 
 })
 
@@ -218,7 +218,7 @@ function startSsdp() {
 
   // start the server
   server.start();
-  log('SSDP server up.')
+  log(`SSDP server up. ${server._location}  ${Object.keys(server._usns)[0]}`)
 
   process.on('exit', function(){
       server.stop() // advertise shutting down and stop listening
