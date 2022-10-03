@@ -73,21 +73,23 @@ end
 local disco = {}
 function disco.start(driver, opts, cons)
   while true do
-    
+
     --Scan for MyQ Bridge via SSDP
-    local device_res = ssdp.find_device();    
-    
+    local device_res = ssdp.find_device();
+
     if device_res ~= nil then
-      log.info('===== MyQ Server FOUND IN NETWORK AT: '..device_res.location)
+      if device_res.location and string.find(device_res.usn, "MyQDoor") then
+        log.info('===== MyQ Server FOUND IN NETWORK AT: ' ..device_res.location)
 
-      local devices = fetch_device_info(device_res.location)
+        local devices = fetch_device_info(device_res.location)
 
-      for devNumber, devObj in pairs(devices) do
-        log.info('===== creating door ' ..devObj.serialNumber)
-        local devResp = create_device(driver, devObj)      
+        for devNumber, devObj in pairs(devices) do
+          log.info('===== creating door ' ..devObj.serialNumber)
+          local devResp = create_device(driver, devObj)
+        end
+
+        return
       end
-
-      return      
     end
     log.error('===== No MyQ Bridge found in network')
   end
