@@ -1,4 +1,4 @@
-const port = process.env.PORT || 0
+var port = process.env.PORT || 0
 const externalConfigFile = './config.json'
 const fs = require('fs');
 var express = require('express');
@@ -198,14 +198,16 @@ app.post('/:doorId/control', (req, res) => {
 
 //Express webserver startup
 let expressApp = app.listen(port, () => {
-    log(`HTTP server listening on port ${expressApp.address().port}`);
+  port = expressApp.address().port
+  log(`HTTP server listening on port ${port}`);
+
 })
 
 function startSsdp() {
   var Server = require('node-ssdp').Server
   , server = new Server(
     {
-        location: 'http://' + require('ip').address() + `:${process.env.PORT}/details`,
+        location: 'http://' + require('ip').address() + `:${port}/details`,
         udn: 'uuid:smartthings-brbeaird-myq',
           sourcePort: 1900,
         ssdpTtl: 2
