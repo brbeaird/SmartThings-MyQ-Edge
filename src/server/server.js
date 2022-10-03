@@ -1,9 +1,4 @@
-//Grab the port to run on
-if (!process.env.PORT){
-  process.env['PORT'] = 8125
-}
-const port = process.env.PORT
-
+const port = process.env.PORT || 0
 const externalConfigFile = './config.json'
 const fs = require('fs');
 var express = require('express');
@@ -17,14 +12,42 @@ var myq;
 const setupMyQ = () => {
 
   //Check for a config file if environment variables not present
-  if (!process.env.MYQ_EMAIL){
+  if (!process.env.MYQ_EMAIL || !process.env.MYQ_PASSWORD){
     try {
+      if (!process.env.MYQ_EMAIL){
+        log('No environment variable found for MYQ_EMAIL');
+      }
+
+      if (!process.env.MYQ_PASSWORD){
+        log('No environment variable found for MYQ_PASSWORD');
+      }
+
+      log(`Checking for config file ${externalConfigFile}`);
+
       let configFile = fs.readFileSync(externalConfigFile, 'UTF8');
       let myqConfig = JSON.parse(configFile);
+
+      if (!myqConfig){
+        log(`Found config file but could not parse it. Verify JSON formatting`, true);
+        process.exit();
+      }
+
+      else if (!myqConfig.MYQ_EMAIL || !myqConfig.MYQ_PASSWORD){
+        log(`Found config file but MYQ_EMAIL and/or MYQ_PASSWORD value is missing`, true);
+        process.exit();
+      }
+
+      else{
+        log(`Loaded config file successfully`);
+      }
+
       process.env['MYQ_EMAIL'] = myqConfig.MYQ_EMAIL;
       process.env['MYQ_PASSWORD'] = myqConfig.MYQ_PASSWORD;
 
-    } catch (error) {}
+    } catch (error) {
+      log(`Error retrieving login information: ${error.message}`, true);
+      process.exit();
+    }
   }
 
   if (!process.env['MYQ_EMAIL'] && !process.env['MYQ_EMAIL']){
@@ -36,6 +59,7 @@ const setupMyQ = () => {
   startSsdp();
   myq = new myQApi.myQApi(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
 
+  refreshMyQ(true);
   setInterval(() => {
     refreshMyQ();
   }, 1000*10);
@@ -46,36 +70,41 @@ var myQDeviceMap = {}
 var deviceStatusCache = {}
 
 //Refresh data from MyQ
-const refreshMyQ = async () => {
+const refreshMyQ = async (firstRun = false) => {
   try {
     await myq.refreshDevices();
     for (let device of myq.devices){
-      if (myQDeviceMap[device.serial_number]){
-        Object.assign(myQDeviceMap[device.serial_number], device)
-      }
-      else{
-        myQDeviceMap[device.serial_number] = device;
-      }
-
-      //See if status has changed. If so, try to push to the hub
-      if (device.device_family == 'garagedoor' && deviceStatusCache[device.serial_number] && deviceStatusCache[device.serial_number].door_state != device.state.door_state){
-        lastUpdate = new Date(device.state.last_update)
-        lastUpdate = lastUpdate.toLocaleString();
-        let cacheDevice = myQDeviceMap[device.serial_number]
-        if (cacheDevice.hubIp){
-          console.log(`${myQDeviceMap[device.serial_number].name} changed to ${device.state.door_state}`);
-          await axios.post(`http://${cacheDevice.hubIp}:${cacheDevice.hubPort}/updateDeviceState`,
-              {
-                uuid: cacheDevice.hubDeviceUuid,
-                doorStatus: device.state.door_state,
-                lastUpdate: lastUpdate
-              })
+      if (device.device_family == 'garagedoor'){
+        if (myQDeviceMap[device.serial_number]){
+          Object.assign(myQDeviceMap[device.serial_number], device)
         }
+        else{
+          myQDeviceMap[device.serial_number] = device;
+        }
+
+        //See if status has changed. If so, try to push to the hub
+        if (deviceStatusCache[device.serial_number] && deviceStatusCache[device.serial_number].door_state != device.state.door_state){
+          lastUpdate = new Date(device.state.last_update)
+          lastUpdate = lastUpdate.toLocaleString();
+          let cacheDevice = myQDeviceMap[device.serial_number]
+          if (cacheDevice.hubIp){
+            log(`${myQDeviceMap[device.serial_number].name} changed to ${device.state.door_state}`);
+            await axios.post(`http://${cacheDevice.hubIp}:${cacheDevice.hubPort}/updateDeviceState`,
+                {
+                  uuid: cacheDevice.hubDeviceUuid,
+                  doorStatus: device.state.door_state,
+                  lastUpdate: lastUpdate
+                })
+          }
+        }
+        deviceStatusCache[device.serial_number] = device.state;
       }
-      deviceStatusCache[device.serial_number] = device.state;
+    }
+    if (firstRun){
+      log(`Found ${Object.keys(myQDeviceMap).length} devices compatible with SmartThings. Waiting for discovery...`)
     }
   } catch (error) {
-    console.log(error.message);
+    log(error.message);
   }
 }
 
@@ -123,7 +152,7 @@ app.post('/:doorId/ping', (req, res) => {
         if (prevHubAddress != 'undefined:undefined'){
           updateMessage += ` (Previously ${prevHubAddress})`
         }
-        console.log(updateMessage);
+        log(updateMessage);
       }
       myQDeviceMap[req.params.doorId].hubIp = req.query.ip;
       myQDeviceMap[req.params.doorId].hubPort = req.query.port;
@@ -158,7 +187,7 @@ app.get('/:doorId/refresh', (req, res) => {
 //Called by the hub to send commands to doors
 app.post('/:doorId/control', (req, res) => {
   try {
-    console.log(`Setting ${myQDeviceMap[req.params.doorId].name} to ${req.query.doorStatus}`);
+    log(`Setting ${myQDeviceMap[req.params.doorId].name} to ${req.query.doorStatus}`);
     myq.execute(myQDeviceMap[req.params.doorId], req.query.doorStatus);
     res.sendStatus(200);
   } catch (error) {
@@ -168,8 +197,8 @@ app.post('/:doorId/control', (req, res) => {
 
 
 //Express webserver startup
-app.listen(port, function () {
-    console.log(`HTTP server listening on port ${port}`);
+let expressApp = app.listen(port, () => {
+    log(`HTTP server listening on port ${expressApp.address().port}`);
 })
 
 function startSsdp() {
@@ -187,9 +216,20 @@ function startSsdp() {
 
   // start the server
   server.start();
-  console.log('SSDP server up.')
+  log('SSDP server up.')
 
   process.on('exit', function(){
       server.stop() // advertise shutting down and stop listening
   })
+}
+
+//Logging with timestamp
+function log(msg, isError) {
+  let dt = new Date().toLocaleString();
+  if (!isError) {
+    console.log(dt + ' | ' + msg);
+  }
+  else{
+    console.error(dt + ' | ' + msg);
+  }
 }
