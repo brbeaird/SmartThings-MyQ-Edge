@@ -147,7 +147,7 @@ app.post('/:doorId/ping', (req, res) => {
 
       //Log this action to console
       if (prevHubAddress != hubAddress){
-        let updateMessage = `Door ${req.params.doorId}: Updating hub address to ${hubAddress}.`
+        let updateMessage = `Door ${req.params.doorId}-${myQDeviceMap[req.params.doorId].name}: Updating hub address to ${hubAddress}.`
         if (prevHubAddress != 'undefined:undefined'){
           updateMessage += ` (Previously ${prevHubAddress})`
         }
@@ -191,6 +191,20 @@ app.post('/:doorId/control', (req, res) => {
     res.sendStatus(200);
   } catch (error) {
     res.status(500).send(error.message);
+  }
+})
+
+//Called by the hub during delete.
+app.post('/:doorId/delete', (req, res) => {
+  try {
+    res.sendStatus(200);    
+    if (myQDeviceMap[req.params.doorId]){
+      log(`SmartThings removed ${req.params.doorId}-${myQDeviceMap[req.params.doorId].name}`);
+      myQDeviceMap[req.params.doorId].hubIp = '';
+      myQDeviceMap[req.params.doorId].hubPort = '';
+    }
+  } catch (error) {
+    log(error.message, true);
   }
 })
 
