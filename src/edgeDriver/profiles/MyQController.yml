@@ -1,0 +1,65 @@
+name: MyQController.v1
+components:
+- id: main
+  capabilities:
+  - id: refresh
+    version: 1
+  - id: towertalent27877.myqstatus
+    version: 1
+  - id: healthCheck
+    version: 1
+metadata:
+  deviceType: MyQController
+  mnmn: SmartThingsCommunity
+  ocfDeviceType: oic.d.wirelessrouter
+  vid: 74de4b9d-c555-36d0-a0d8-c04dcdf64ccc
+preferences:
+  - title: "MyQ Email"
+    name: email
+    description: "E-mail used to login to MyQ"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: ""
+  - title: "MyQ Password"
+    name: password
+    description: "Password used to login to MyQ"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: password
+      default: ""
+  - title: "MyQ Polling Internal"
+    name: pollingInterval
+    description: "Refresh interval (in seconds)"
+    required: true
+    preferenceType: integer
+    definition:
+      minimum: 5
+      maximum: 3600
+      default: 10
+  - title: "Device include list"
+    name: includeList
+    escription: "(Optional) comma-separated list of device names to include"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      default: ""
+  - title: "Server IP"
+    name: serverIp
+    description: "IP of server (leave blank to autodetect)"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      default: ""
+  - title: "Server Port"
+    name: serverPort
+    description: "Port of server (leave blank to autodetect)"
+    required: false
+    preferenceType: string
+    definition:
+      stringType: text
+      default: ""

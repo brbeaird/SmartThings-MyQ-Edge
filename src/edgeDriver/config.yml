@@ -1,5 +1,5 @@
-name: 'MyQ Door'
-packageKey: 'MyQDoor'
+name: 'MyQ Connector'
+packageKey: 'MyQConnector'
 permissions:
   lan: {}
   discovery: {}

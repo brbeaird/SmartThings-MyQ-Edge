@@ -1,0 +1,22 @@
+{
+    "dashboard": {
+        "states": [
+            {
+                "label": "Status: {{statusText.value}}"
+            }
+        ],
+        "actions": [],
+        "basicPlus": []
+    },
+    "detailView": [
+        {
+            "label": "Status",
+            "displayType": "state",
+            "state": {
+                "label": "{{statusText.value}}"
+            }
+        }
+    ],
+    "id": "towertalent27877.myqstatus",
+    "version": 2
+}
