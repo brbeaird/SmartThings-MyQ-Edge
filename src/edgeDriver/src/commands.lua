@@ -12,6 +12,9 @@ local socket = require('socket')
 local config = require('config')
 
 local authIsBad = false
+local authThrottleCount = 0
+local authThrottleReset = 6
+
 local command_handler = {}
 
 local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
@@ -26,6 +29,12 @@ function command_handler.refresh(driver, callingDevice, skipScan)
 
   if authIsBad == true then
     log.info('Bad auth.')
+    authThrottleCount = authThrottleCount + 1
+
+    if authThrottleCount >= authThrottleReset then
+      authIsBad = false
+    end
+
     return
   end
 
