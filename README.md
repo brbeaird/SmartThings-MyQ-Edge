@@ -67,6 +67,12 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
  - MyQ Polling Interval: by default, the Edge driver polls MyQ every 10 seconds to check the status of MyQ devices. You can override that interval here. Note that a frequent interval is recommended if you want SmartThings to accurately catch all open/close events.
  - Device include list: if you want to only include certain devices in your MyQ account(s), you can enter the names of which ones you want to be created in SmartThings (separated by a comma)
  - Server IP and Server Port: if you want to bypass auto-detection, you can manually set the MyQ server IP/Port here. This is only recommended for setups where the server has a static IP address as well as the port variable configured.
+
+## Advanced troubleshooting and logging
+- To view logs of the edge driver, download the SmartThings CLI here: https://github.com/SmartThingsCommunity/smartthings-cli/releases
+- Then, run this command: `smartthings edge:drivers:logcat --hub-address=xxx.xxx.x.x` (entering your hub IP address)
+- The CLI should prompt you to login
+- When prompted with a list of drivers, choose "MyQ Connector"
  
 
 ### Other Notes
