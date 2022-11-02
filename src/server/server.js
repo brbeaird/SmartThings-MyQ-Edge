@@ -1,10 +1,12 @@
-var port = process.env.PORT || 0
+var port = process.env.MYQ_SERVER_PORT || 0
 const axios = require('axios');
 var express = require('express');
 var app = express();
 app.use(express.json());
 
 const myQApi = require('@hjdhjd/myq'); //Much thanks to hjdhjd for this
+var myqEmail;
+var myqPassword;
 var myq; //Holds MyQ connection object
 var myQDeviceMap = {} //Local cache of devices and their statuses
 
@@ -13,14 +15,21 @@ const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP au
 
 //Set credentials on myq object (these are always passed-in from calls from the ST hub)
 function myqLogin(email, password){
-  if (!myq){
+
+  //If password has been updated, set up new API object
+  if (email != myqEmail || password != myqPassword){
+
+    //Handle missing info
     if (!email || !password){
       log('Missing username or password.')
       return false;
     }
-    log('Got username/password from hub. Initializing connection.')
+
+    //Save it
+    log('Got new username/password from hub. Initializing connection.')
     myq = new myQApi.myQApi(email, password);
-    return true;
+    myqEmail = email;
+    myqPassword = password;
   }
   return true;
 }
@@ -36,17 +45,19 @@ app.post('/devices', async (req, res) => {
 
     let refreshResult = await myq.refreshDevices();
     if (!refreshResult){
-      log(`Refresh error: login failed.`, 1);
-      myq = undefined
+      log(`Refresh failed`, 1);
       return res.sendStatus(401);
     }
 
-    res.send(myq.devices);
-
+    //Check for devices
     if (myq.devices && myq.devices.length > 0){
+      res.send(myq.devices);
       for (let device of myq.devices){
         myQDeviceMap[device.serial_number] = device;
       }
+    }
+    else{
+      res.status(500).send('No devices found');
     }
 
   } catch (error) {

@@ -12,9 +12,6 @@ local socket = require('socket')
 local config = require('config')
 
 local authIsBad = false
-local authThrottleCount = 0
-local authThrottleReset = 6
-
 local command_handler = {}
 
 local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
@@ -25,16 +22,10 @@ end
 
 ------------------
 -- Refresh command
-function command_handler.refresh(driver, callingDevice, skipScan)
+function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
   if authIsBad == true then
     log.info('Bad auth.')
-    authThrottleCount = authThrottleCount + 1
-
-    if authThrottleCount >= authThrottleReset then
-      authIsBad = false
-    end
-
     return
   end
 
@@ -174,7 +165,7 @@ function command_handler.refresh(driver, callingDevice, skipScan)
             local metadata = {
               type = 'LAN',
               device_network_id = devObj.serial_number,
-              label = devObj.name ..'TEST',
+              label = devObj.name,
               profile = profileName,
               manufacturer = devObj.device_platform,
               model = myQController.model,
@@ -189,7 +180,7 @@ function command_handler.refresh(driver, callingDevice, skipScan)
       end
     end
 
-  elseif code == 401 then
+  elseif code == 401 and firstAuth == 1 then
     --Update all devices to show invalid auth
     local device_list = driver:get_devices() --Grab existing devices
         for _, device in ipairs(device_list) do

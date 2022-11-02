@@ -93,7 +93,7 @@ local function handler_infochanged (driver, device, event, args)
   end
 
   --Go ahead and refresh
-  commands.refresh(driver, device, 1)
+  commands.refresh(driver, device, 1, 1)
 
 end
 
