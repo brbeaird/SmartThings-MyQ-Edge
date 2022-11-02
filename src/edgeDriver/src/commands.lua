@@ -11,6 +11,8 @@ local httpUtil = require('httpUtil')
 local socket = require('socket')
 local config = require('config')
 
+local doorDeviceProfile = 'MyQDoor.v1'
+local lampDeviceProfile = 'MyQLamp.v1'
 local authIsBad = false
 local consecutiveFailureCount = 0
 local consecutiveFailureThreshold = 10
@@ -156,10 +158,10 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
             log.info('Ready to create ' ..devObj.name ..' ('..devObj.serial_number ..')')
             local profileName
             if devObj.device_type == 'garagedooropener' then
-              profileName = 'MyQDoor.v1'
+              profileName = doorDeviceProfile
             end
             if devObj.device_type == 'lamp' then
-              profileName = 'MyQLamp.v1'
+              profileName = lampDeviceProfile
             end
 
             local metadata = {
@@ -169,7 +171,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
               profile = profileName,
               manufacturer = devObj.device_platform,
               model = myQController.model,
-              vendor_provided_label = 'myq',
+              vendor_provided_label = profileName,
               parent_device_id = myQController.id
             }
             assert (driver:try_create_device(metadata), "failed to create device")
@@ -262,6 +264,7 @@ function command_handler.open(driver, device)
     return
   end
   log.error('no response from device')
+  device:emit_event(myqStatusCap.statusText('OPEN command failed'))
   return false
 end
 
@@ -275,13 +278,14 @@ function command_handler.close(driver, device)
     return
   end
   log.error('no response from device')
+  device:emit_event(myqStatusCap.statusText('CLOSE command failed'))
   return false
 end
 
 --On
 function command_handler.on(driver, device)
-  log.trace('Sending ON command: ')
-  if (device.profile == 'garagedooropener') then
+  log.trace('Sending ON command: ' ..device.vendor_provided_label)
+  if (device.vendor_provided_label == doorDeviceProfile) then
     command_handler.open(driver, device)
     return
   end
@@ -293,13 +297,14 @@ function command_handler.on(driver, device)
     device:emit_event(caps.switch.switch.on())
   end
   log.error('no response from device')
+  device:emit_event(myqStatusCap.statusText('ON command failed'))
   return false
 end
 
 --Off
 function command_handler.off(driver, device)
   log.trace('Sending OFF command: ')
-  if (device.profile == 'garagedooropener') then
+  if (device.vendor_provided_label == doorDeviceProfile) then
     command_handler.close(driver, device)
     return
   end
@@ -311,6 +316,7 @@ function command_handler.off(driver, device)
     device:emit_event(caps.switch.switch.off())
   end
   log.error('no response from device')
+  device:emit_event(myqStatusCap.statusText('OFF command failed'))
   return false
 end
 
