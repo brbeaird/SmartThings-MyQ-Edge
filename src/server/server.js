@@ -1,242 +1,134 @@
-var port = process.env.PORT || 0
-const externalConfigFile = './config.json'
-const fs = require('fs');
+var port = process.env.MYQ_SERVER_PORT || 0
+const axios = require('axios');
 var express = require('express');
 var app = express();
-const myQApi = require('@hjdhjd/myq');
-const axios = require('axios');
+app.use(express.json());
 
-var myq;
+const myQApi = require('@hjdhjd/myq'); //Much thanks to hjdhjd for this
+var myqEmail;
+var myqPassword;
+var myq; //Holds MyQ connection object
+var myQDeviceMap = {} //Local cache of devices and their statuses
 
-//Get MyQ config and set up refresh job
-const setupMyQ = () => {
+const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP auto-discovery
 
-  //Check for a config file if environment variables not present
-  if (!process.env.MYQ_EMAIL || !process.env.MYQ_PASSWORD){
-    try {
-      if (!process.env.MYQ_EMAIL){
-        log('No environment variable found for MYQ_EMAIL');
-      }
 
-      if (!process.env.MYQ_PASSWORD){
-        log('No environment variable found for MYQ_PASSWORD');
-      }
+//Set credentials on myq object (these are always passed-in from calls from the ST hub)
+function myqLogin(email, password){
 
-      log(`Checking for config file ${externalConfigFile}`);
+  //If password has been updated, set up new API object
+  if (email != myqEmail || password != myqPassword){
 
-      let configFile = fs.readFileSync(externalConfigFile, 'UTF8');
-      let myqConfig = JSON.parse(configFile);
-
-      if (!myqConfig){
-        log(`Found config file but could not parse it. Verify JSON formatting`, true);
-        process.exit();
-      }
-
-      else if (!myqConfig.MYQ_EMAIL || !myqConfig.MYQ_PASSWORD){
-        log(`Found config file but MYQ_EMAIL and/or MYQ_PASSWORD value is missing`, true);
-        process.exit();
-      }
-
-      else{
-        log(`Loaded config file successfully`);
-      }
-
-      process.env['MYQ_EMAIL'] = myqConfig.MYQ_EMAIL;
-      process.env['MYQ_PASSWORD'] = myqConfig.MYQ_PASSWORD;
-
-    } catch (error) {
-      log(`Error retrieving login information: ${error.message}`, true);
-      process.exit();
+    //Handle missing info
+    if (!email || !password){
+      log('Missing username or password.')
+      return false;
     }
+
+    //Save it
+    log('Got new username/password from hub. Initializing connection.')
+    myq = new myQApi.myQApi(email, password);
+    myqEmail = email;
+    myqPassword = password;
   }
-
-  if (!process.env['MYQ_EMAIL'] && !process.env['MYQ_EMAIL']){
-    console.error(`MyQ credentials must be specified either MYQ_EMAIL and MYQ_PASSWORD env variables or within the config.json file`);
-    process.exit();
-  }
-
-  //All good. Send it
-  myq = new myQApi.myQApi(process.env.MYQ_EMAIL, process.env.MYQ_PASSWORD);
-
-  refreshMyQ(true);
-  setInterval(() => {
-    refreshMyQ();
-  }, 1000*10);
+  return true;
 }
 
-//Local cache of devices and their statuses
-var myQDeviceMap = {}
-var deviceStatusCache = {}
+/**Exposed Express routes */
 
-//Refresh data from MyQ
-const refreshMyQ = async (firstRun = false) => {
+//Gets devices
+app.post('/devices', async (req, res) => {
   try {
-    await myq.refreshDevices();
-    for (let device of myq.devices){
-      if (device.device_family == 'garagedoor'){
-        if (myQDeviceMap[device.serial_number]){
-          Object.assign(myQDeviceMap[device.serial_number], device)
-        }
-        else{
-          myQDeviceMap[device.serial_number] = device;
-        }
+    if (!myqLogin(req.body.auth.email, req.body.auth.password)){
+      return res.sendStatus(401);
+    }
 
-        //See if status has changed. If so, try to push to the hub
-        if (deviceStatusCache[device.serial_number] && deviceStatusCache[device.serial_number].door_state != device.state.door_state){
-          lastUpdate = new Date(device.state.last_update)
-          lastUpdate = lastUpdate.toLocaleString();
-          let cacheDevice = myQDeviceMap[device.serial_number]
-          if (cacheDevice.hubIp){
-            log(`${myQDeviceMap[device.serial_number].name} changed to ${device.state.door_state}`);
-            await axios.post(`http://${cacheDevice.hubIp}:${cacheDevice.hubPort}/updateDeviceState`,
-                {
-                  uuid: cacheDevice.hubDeviceUuid,
-                  doorStatus: device.state.door_state,
-                  lastUpdate: lastUpdate
-                })
-          }
-        }
-        deviceStatusCache[device.serial_number] = device.state;
+    let refreshResult = await myq.refreshDevices();
+    if (!refreshResult){
+      log(`Refresh failed`, 1);
+      return res.sendStatus(401);
+    }
+
+    //Check for devices
+    if (myq.devices && myq.devices.length > 0){
+      res.send(myq.devices);
+      for (let device of myq.devices){
+        myQDeviceMap[device.serial_number] = device;
       }
     }
-    if (firstRun){
-      log(`Found ${Object.keys(myQDeviceMap).length} devices compatible with SmartThings. Waiting for discovery...`)
+    else{
+      res.status(500).send('No devices found');
     }
+
   } catch (error) {
-    log(error.message);
-  }
-}
-
-setupMyQ();
-
-/**EXPRESS ROUTES */
-
-//Called during discovery
-app.get('/details', (req, res) => {
-  try {
-    let devArray = [];
-
-    for (let device of myq.devices){
-      if (device.device_family == 'garagedoor'){
-        devArray.push({
-          name: device.name,
-          baseUrl: `${require('ip').address()}:${port}`,
-          vendor: 'MyQ',
-          manufacturer: device.device_platform,
-          model: device.device_type,
-          serialNumber: device.serial_number,
-          status: device.state.door_state,
-          lastUpdate: device.state.last_update
-        })
-      }
-    }
-    let result = {devices: devArray}
-    res.send(result);
-  } catch (error) {
+    log(`Refresh error: ${error.message}`, 1);
     res.status(500).send(error.message);
   }
 })
 
-//Called by the hub fairly frequently
-app.post('/:doorId/ping', (req, res) => {
+//Controls a device
+app.post('/:devId/control', async (req, res) => {
   try {
-    //If we know about this door, link hub network info with iti
-    if (myQDeviceMap[req.params.doorId]){
-      let prevHubAddress = myQDeviceMap[req.params.doorId].hubIp + ':' + myQDeviceMap[req.params.doorId].hubPort
-      let hubAddress = req.query.ip + ':' + req.query.port;
-
-      //Log this action to console
-      if (prevHubAddress != hubAddress){
-        let updateMessage = `Door ${req.params.doorId}-${myQDeviceMap[req.params.doorId].name}: Updating hub address to ${hubAddress}.`
-        if (prevHubAddress != 'undefined:undefined'){
-          updateMessage += ` (Previously ${prevHubAddress})`
-        }
-        log(updateMessage);
-      }
-      myQDeviceMap[req.params.doorId].hubIp = req.query.ip;
-      myQDeviceMap[req.params.doorId].hubPort = req.query.port;
-      myQDeviceMap[req.params.doorId].hubDeviceUuid = req.query.ext_uuid;
+    log(`Setting ${myQDeviceMap[req.params.devId].name} to ${req.body.command}`);
+    if (!myqLogin(req.body.auth.email, req.body.auth.password)){
+      return res.sendStatus(401);
     }
-    res.sendStatus(200);
+    let result = await myq.execute(myQDeviceMap[req.params.devId], req.body.command)
+    if (result){
+      res.sendStatus(200);
+    }
+    else{
+      res.status(500).send('Error sending command. Please try again.')
+    }
   } catch (error) {
     res.status(500).send(error.message);
   }
 })
-
-
-//Called by the hub less frequently, mostly as a fallback to keep things in sync
-app.get('/:doorId/refresh', (req, res) => {
-  try {
-    let lastUpdate;
-    if (myQDeviceMap[req.params.doorId]?.state.last_update){
-      lastUpdate = new Date(myQDeviceMap[req.params.doorId].state.last_update)
-      lastUpdate = lastUpdate.toLocaleString();
-    }
-    let cache = {
-      doorStatus: myQDeviceMap[req.params.doorId].state.door_state,
-      lastUpdate: lastUpdate
-    }
-    res.send(cache)
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-})
-
-
-//Called by the hub to send commands to doors
-app.post('/:doorId/control', (req, res) => {
-  try {
-    log(`Setting ${myQDeviceMap[req.params.doorId].name} to ${req.query.doorStatus}`);
-    myq.execute(myQDeviceMap[req.params.doorId], req.query.doorStatus);
-    res.sendStatus(200);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-})
-
-//Called by the hub during delete.
-app.post('/:doorId/delete', (req, res) => {
-  try {
-    res.sendStatus(200);    
-    if (myQDeviceMap[req.params.doorId]){
-      log(`SmartThings removed ${req.params.doorId}-${myQDeviceMap[req.params.doorId].name}`);
-      myQDeviceMap[req.params.doorId].hubIp = '';
-      myQDeviceMap[req.params.doorId].hubPort = '';
-    }
-  } catch (error) {
-    log(error.message, true);
-  }
-})
-
 
 //Express webserver startup
 let expressApp = app.listen(port, () => {
   port = expressApp.address().port
   log(`HTTP server listening on port ${port}`);
   startSsdp();
-
 })
 
+//Set up ssdp
 function startSsdp() {
-  var Server = require('node-ssdp').Server
+  var Server = require('./lib/node-ssdp').Server
   , server = new Server(
     {
-        location: 'http://' + require('ip').address() + `:${port}/details`,
+        location: 'http://' + '' + `:${port}/details`,
         udn: 'uuid:smartthings-brbeaird-myq',
           sourcePort: 1900,
         ssdpTtl: 2
     }
   );
-
-  server.addUSN('urn:SmartThingsCommunity:device:MyQDoor');
-
-  // start the server
+  server.addUSN(ssdpId);
   server.start();
-  log(`SSDP server up. ${server._location}  ${Object.keys(server._usns)[0]}`)
+  log(`SSDP server up and listening for broadcasts: ${Object.keys(server._usns)[0]}`)
 
-  process.on('exit', function(){
-      server.stop() // advertise shutting down and stop listening
-  })
+  //I tweaked ssdp library to bubble up a broadcast event and to then do an http post to the URL
+  // this is because this app cannot know its external IP if running as a docker container
+  server.on('response', async function (headers, msg, rinfo) {
+    try {
+      if (headers.ST != ssdpId || !headers.SERVER_IP || !headers.SERVER_PORT){
+        return;
+      }
+      let hubAddress = `http://${headers.SERVER_IP}:${headers.SERVER_PORT}/ping`
+      log(`Detected SSDP broadcast. Posting details back to server at ${hubAddress}`)
+      await axios.post(hubAddress,
+        {
+          myqServerPort: port,
+          deviceId: headers.DEVICE_ID
+        })
+    } catch (error) {
+        let msg = error.message;
+        if (error.response){
+          msg += error.response.data
+      }
+      log(msg, true);
+    }
+  });
 }
 
 //Logging with timestamp

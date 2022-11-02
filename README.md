@@ -3,36 +3,74 @@ SmartThings/MyQ Integration via Edge
 
 This provides an integration between SmartThings and MyQ using a LAN bridge server and an Edge driver.
 
+### Overview
+This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp module controllers into SmartThings. It creates a garage door device and/or a light device in your list of Things and allows you to control the device:
+
+* By tapping the device in the SmartThings mobile app
+* Automatically by your presence (coming or going) in an automation or other SmartThings rules app
+* Via tiles in an ActionTiles dashboard
+* By asking Alexa or Google Home to turn the device on (open) or off (close)
+
+
+### Device and ActionTiles
+![Door device](https://i.imgur.com/Yx4uLiZm.png "Door device")
+![With ActionTiles](https://i.imgur.com/8BSYtMI.png "With ActionTiles")
+
+## Prerequisites and Network requirements
+  - You will need a machine that can continually run the MyQ server bridge application on your network. Examples include: Raspberry Pi, Linux server, Windows desktop, Mac, Unraid server, etc.
+  - Your SmartThings hub and the machine running the MyQ server application must be able to reach each other on the same LAN.
+  - In most cases, the hub will be able to use SSDP broadcasts to auto-detect the IP address of the server (assuming applicable port mapping, including UDP 1900, has been set up - see detailed instructions below).  
+  
+
 ## Installation
   - Add the Edge driver to your SmartThings hub - [click here to add the driver channel](https://bestow-regional.api.smartthings.com/invite/BxlrLZK3GxMP)
-  - Decide how you will host the bridge server on your LAN (details on methods below).
+  - Decide how you will host the bridge server on your LAN ([details on methods below](#running-the-bridge-server-with-docker-recommended)).
     - Using Docker
     - Using a simple executable
-  - Once your bridge server is running and connected to MyQ, open the SmartThings mobile app. 
+  - Once your bridge server is running, open the SmartThings mobile app. 
   - Go to devices and click the add button to Add device.
   - Scan for nearby devices
-  - You should see your devices automatically added
+  - You should see the MyQ Controller device added
+  - Go to the MyQ controller device, tap the elipses at the top right, then tap settings  
+  - Enter your MyQ email and password
+  - ![Door device](https://i.imgur.com/ANZifdsl.png "Door device")
+  - You can leave the other settings as-is ([see advanced options below](#advanced-settings-configured-in-the-myq-controller-device))
+  - Upon saving, the SmartThings hub will try to find your MyQ server, login, and automatically create devices.
+  - If something goes wrong, refresh the controller device and check the status field.
+  
   
 ## Running the bridge server with an executable
- - Find the executable [for your OS here](https://github.com/brbeaird/SmartThings-MyQ-Edge/tree/main/src/server/bin)
- - Download it as well as the config.json file
- - Edit the config.json file to include your MyQ e-mail and password
- - Run the executable. After several seconds, you should see a message indicating a successful connection to MyQ.
+ - Find the executable [for your OS here](https://github.com/brbeaird/SmartThings-MyQ-Edge/tree/main/src/server/bin) 
+ - Download it
+ - Run the executable. After several seconds, you should see a message indicating it is waiting for a connection from the hub.
+ - By default, the http server spins up on a random port. If you want to specify one, set the MYQ_SERVER_PORT environment variable on your system.
  
  
  ## Running the bridge server with Docker (recommended)
-  - Dockerhub image can be found here: https://hub.docker.com/r/brbeaird/smartthings-myq-edge
-  - Pull the image down: `docker pull brbeaird/smartthings-myq-edge`
-  - If using Unraid, enable advanced view, set repository to brbeaird/smartthings-myq-edge and the dockerhub url from the first step
-  - Add environment variables: MYQ_EMAIL and MYQ_PASSWORD  
-  - Start the container
+  - Check out information here for install Docker: https://docs.docker.com/engine/install/
+  - As info: Dockerhub image can be found here: https://hub.docker.com/r/brbeaird/smartthings-myq-edge
+  - Pull the image down: `docker pull brbeaird/smartthings-myq-edge`  
+  - Start the container `docker run -d --name='smartthings-myq-edge' -e 'MYQ_SERVER_PORT'='8090' -p '8090:8090/tcp' -p '1900:1900/udp' 'brbeaird/smartthings-myq-edge:latest'`
+  - What this command does: 
+    - -d: runs the container in detached mode, so it continually runs in the background
+    - -e: sets the MYQ_SERVER_PORT environment variable to 8090
+    - -p: maps ports TCP 8090 and UDP 1900 (required for IP auto-detection) to the Docker host.    
+    - **Note: This assumes port 8090 is not already in use on your Docker host. You can change it to something else, but be sure to change both the environment variable and the port mapping.**
+    - If using IP auto-detection, it is required that the MYQ_SERVER_PORT variable is set to the same port that is mapped to the host. This is because the app needs to know the publicly accessible port is so it can pass that information back to the hub.
+  - If using Unraid, in the Docker UI:
+    - Enable advanced view, set repository to brbeaird/smartthings-myq-edge and the dockerhub url from the first step
+    - Add a variable: MYQ_SERVER_PORT, and set it to 8090
+    - Add a port mapping: 8090 (TCP), both container and host
+    - Add a port mapping: UDP 1900, both container and host
  
-  
+## Advanced Settings (configured in the MyQ-Controller device)
+ - MyQ Polling Interval: by default, the Edge driver polls MyQ every 10 seconds to check the status of MyQ devices. You can override that interval here. Note that a frequent interval is recommended if you want SmartThings to accurately catch all open/close events.
+ - Device include list: if you want to only include certain devices in your MyQ account(s), you can enter the names of which ones you want to be created in SmartThings (separated by a comma)
+ - Server IP and Server Port: if you want to bypass auto-detection, you can manually set the MyQ server IP/Port here. This is only recommended for setups where the server has a static IP address as well as the port variable configured.
+ 
+
 ### Other Notes
- - The Edge driver and bridge server make use of SSDP for automatic discovery.
- - If the IP address or port of the bridge server changes, the Edge driver will use SSDP to automatically find the server at the new IP/port.
- - The Edge driver pings the bridge server once per minute; this allows the bridge server to store the current IP address/port of the SmartThings hub.
- - The bridge server polls MyQ every 10 seconds to check the status of MyQ devices. If the status is detected to have changed since the last poll, an update will be sent to the Edge driver to instantly update the device in SmartThings. The Edge driver will also occasionally poll the bridge server to cover situations where an update is missed and things get out of sync.
+ - The MyQ API is generally reliable, but if you watch the polling logs, you will occasionally see random refresh or auth errors. This is expected and should be set up to self-resolve. 
 
 
 ## Special Thanks

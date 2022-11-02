@@ -1,13 +1,10 @@
-name: MyQDoor.v1
+name: MyQLamp.v1
 metadata:
-  vid: 3d0a44d5-0bd6-3b99-b754-ab6f439fdeb9
-  ocfDeviceType: oic.d.garagedoor
+  ocfDeviceType: oic.d.light
   mnmn: SmartThingsCommunity
 components:
 - id: main
   capabilities:
-  - id: doorControl
-    version: 1
   - id: refresh
     version: 1
   - id: switch
@@ -16,3 +13,5 @@ components:
     version: 1
   - id: healthCheck
     version: 1
+  categories:
+  - name: Others

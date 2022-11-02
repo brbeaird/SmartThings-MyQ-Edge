@@ -1,0 +1,6 @@
+myQBridgeServer-linux-arm64 filter=lfs diff=lfs merge=lfs -text
+myQBridgeServer-macos-x64 filter=lfs diff=lfs merge=lfs -text
+myQBridgeServer-linux-x64 filter=lfs diff=lfs merge=lfs -text
+myQBridgeServer-win-x64 filter=lfs diff=lfs merge=lfs -text
+myQBridgeServer-linux filter=lfs diff=lfs merge=lfs -text
+myQBridgeServer-macos filter=lfs diff=lfs merge=lfs -text
