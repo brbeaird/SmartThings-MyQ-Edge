@@ -30,7 +30,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
   - Once your bridge server is running, open the SmartThings mobile app. 
   - Go to devices and click the add button to Add device.
   - Scan for nearby devices
-  - You should see the MyQ Controller device added
+  - You should see the MyQ Controller device added. This can take up to 30 seconds. If it still does not show up, go back out to the "No room assigned" category and see if it got added to the bottom.
   - Go to the MyQ controller device, tap the elipses at the top right, then tap settings  
   - Enter your MyQ email and password
   - ![Door device](https://i.imgur.com/ANZifdsl.png "Door device")
