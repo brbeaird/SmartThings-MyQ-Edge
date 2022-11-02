@@ -85,6 +85,24 @@ app.post('/:devId/control', async (req, res) => {
   }
 })
 
+//Status endpoint for troubleshooting
+app.get('/status', async (req, res) => {
+  try {
+    if (!myq){
+      return res.status(200).send('Awaiting login');
+    }
+
+    if (!myq.devices || myq.devices.length == 0){
+      return res.status(200).send('No devices detected');
+    }
+    res.send(myq.devices);
+
+  } catch (error) {
+    log(`status error: ${error.message}`, 1);
+    res.status(500).send(error.message);
+  }
+})
+
 //Express webserver startup
 let expressApp = app.listen(port, () => {
   port = expressApp.address().port
