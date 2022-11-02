@@ -47,8 +47,9 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
  
  
  ## Running the bridge server with Docker (recommended)
-  - Check out information here for install Docker: https://docs.docker.com/engine/install/
+  - Check out information here to install Docker: https://docs.docker.com/engine/install/
   - As info: Dockerhub image can be found here: https://hub.docker.com/r/brbeaird/smartthings-myq-edge
+  - **Reminder: this docker container must be on the same LAN as the SmartThings hub so they can communicate**
   - Pull the image down: `docker pull brbeaird/smartthings-myq-edge`  
   - Start the container `docker run -d --name='smartthings-myq-edge' -e 'MYQ_SERVER_PORT'='8090' -p '8090:8090/tcp' -p '1900:1900/udp' 'brbeaird/smartthings-myq-edge:latest'`
   - What this command does: 
