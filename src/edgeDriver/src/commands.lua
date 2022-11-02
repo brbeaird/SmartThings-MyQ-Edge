@@ -80,21 +80,16 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
   --Handle server result
   if success and code == 200 then
     local raw_data = json.decode(table.concat(res_body)..'}') --ltn12 bug drops last  bracket
-
-    --Update controller status
     consecutiveFailureCount = 0
-    myQController:online()
-    local defaultStatus = 'Connected'
-    local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
-    if currentStatus ~= defaultStatus then
-      myQController:emit_event(myqStatusCap.statusText(defaultStatus))
-    end
+    local installedDeviceCount = 0
 
     --Loop over latest data from MyQ
+    local myqDeviceCount = 0
     for devNumber, devObj in pairs(raw_data) do
 
       --Doors and lamp modules
       if devObj.device_type == 'garagedooropener' or devObj.device_type == 'lamp' then
+        myqDeviceCount = myqDeviceCount + 1
         local deviceExists = false
         local stDevice
 
@@ -109,6 +104,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
         --If this device already exists in SmartThings, update the status
         if deviceExists then
+          installedDeviceCount = installedDeviceCount + 1
           stDevice:online()
           local defaultStatus = 'Connected'
           local currentStatus = stDevice:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
@@ -177,11 +173,21 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
               parent_device_id = myQController.id
             }
             assert (driver:try_create_device(metadata), "failed to create device")
+            installedDeviceCount = installedDeviceCount + 1
           else
             --log.info(devObj.name ..' not found in device inclusion list.')
           end
         end
       end
+    end
+
+    --Update controller status
+    log.info('Refresh successful via ' ..myQController.model ..'. MyQ devices: ' ..myqDeviceCount ..', ST-installed devices: ' ..installedDeviceCount)
+    myQController:online()
+    local newStatus = 'Connected: ' ..installedDeviceCount ..' devices'
+    local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
+    if currentStatus ~= newStatus then
+      myQController:emit_event(myqStatusCap.statusText(newStatus))
     end
 
   elseif code == 401 and firstAuth == 1 then
