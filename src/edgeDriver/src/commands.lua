@@ -12,6 +12,9 @@ local socket = require('socket')
 local config = require('config')
 
 local authIsBad = false
+local consecutiveFailureCount = 0
+local consecutiveFailureThreshold = 10
+
 local command_handler = {}
 
 local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
@@ -79,6 +82,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     local raw_data = json.decode(table.concat(res_body)..'}') --ltn12 bug drops last  bracket
 
     --Update controller status
+    consecutiveFailureCount = 0
     myQController:online()
     local defaultStatus = 'Connected'
     local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
@@ -191,20 +195,24 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
   else
 
-    --Update all devices to show server offline
-    local offlineStatus = 'Error: MyQ Bridge Offline: ' ..myQController.model
-    local device_list = driver:get_devices() --Grab existing devices
-    for _, device in ipairs(device_list) do
-      device:offline()
-      local currentStatus = device:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
-      if currentStatus ~= offlineStatus then
-        log.info('Setting offline' ..currentStatus)
-        device:emit_event(myqStatusCap.statusText(offlineStatus))
+    --The MyQ API is unreliable. Allow up to 10 failures in a row before we display failure
+    consecutiveFailureCount = consecutiveFailureCount + 1
+    if consecutiveFailureCount > consecutiveFailureThreshold then
+
+      --Update all devices to show server offline
+      local offlineStatus = 'Error: MyQ Bridge Offline: ' ..myQController.model
+      local device_list = driver:get_devices() --Grab existing devices
+      for _, device in ipairs(device_list) do
+        device:offline()
+        local currentStatus = device:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
+        if currentStatus ~= offlineStatus then
+          log.info('Setting offline' ..currentStatus)
+          device:emit_event(myqStatusCap.statusText(offlineStatus))
+        end
       end
     end
 
-
-    --If refresh failed, try a UDP search to try and auto detect the server (maybe the IP or port changed)
+    --If refresh failed with no response at all, try a UDP search to try and auto detect the server (maybe the IP or port changed)
     log.error('Refresh Failed.')
 
     if (skipScan ~= 1 and (res_body == nil or code == 404 )) then
