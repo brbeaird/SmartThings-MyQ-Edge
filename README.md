@@ -46,23 +46,22 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
  - By default, the http server spins up on a random port. If you want to specify one, set the MYQ_SERVER_PORT environment variable on your system.
  
  
- ## Running the bridge server with Docker (recommended)
+ ## Running the bridge server with Docker (recommended)    
   - Check out information here to install Docker: https://docs.docker.com/engine/install/
   - As info: Dockerhub image can be found here: https://hub.docker.com/r/brbeaird/smartthings-myq-edge
   - **Reminder: this docker container must be on the same LAN as the SmartThings hub so they can communicate**
   - Pull the image down: `docker pull brbeaird/smartthings-myq-edge`  
-  - Start the container `docker run -d --name='smartthings-myq-edge' -e 'MYQ_SERVER_PORT'='8090' -p '8090:8090/tcp' -p '1900:1900/udp' 'brbeaird/smartthings-myq-edge:latest'`
+  - Start the container `docker run -d --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'`
   - What this command does: 
     - -d: runs the container in detached mode, so it continually runs in the background
-    - -e: sets the MYQ_SERVER_PORT environment variable to 8090
-    - -p: maps ports TCP 8090 and UDP 1900 (required for IP auto-detection) to the Docker host.    
+    - --network=host: sets the container to run with "host" mode, which means running without an extra layer between it and the host. This is very important for IP/Port auto-detect
+    
+  - If you know what you are doing and want to run the container in bridge mode: 
+    - Set the MYQ_SERVER_PORT variable to 8090 (this must be the same port that will be mapped to the host)
+    - Map port 8090 TCP, container and host set the same
+    - Map UDP 1900, container and host set the same    
     - **Note: This assumes port 8090 is not already in use on your Docker host. You can change it to something else, but be sure to change both the environment variable and the port mapping.**
-    - If using IP auto-detection, it is required that the MYQ_SERVER_PORT variable is set to the same port that is mapped to the host. This is because the app needs to know the publicly accessible port is so it can pass that information back to the hub.
-  - If using Unraid, in the Docker UI:
-    - Enable advanced view, set repository to brbeaird/smartthings-myq-edge and the dockerhub url from the first step
-    - Add a variable: MYQ_SERVER_PORT, and set it to 8090
-    - Add a port mapping: 8090 (TCP), both container and host
-    - Add a port mapping: UDP 1900, both container and host
+    - If using IP auto-detection, it is required that the MYQ_SERVER_PORT variable is set to the same port that is mapped to the host. This is because the app needs to know the publicly accessible port is so it can pass that information back to the hub.  
  
 ## Advanced Settings (configured in the MyQ-Controller device)
  - MyQ Polling Interval: by default, the Edge driver polls MyQ every 10 seconds to check the status of MyQ devices. You can override that interval here. Note that a frequent interval is recommended if you want SmartThings to accurately catch all open/close events.
