@@ -11,11 +11,13 @@ local httpUtil = require('httpUtil')
 local socket = require('socket')
 local config = require('config')
 
+local myqDoorFamilyName = 'garagedoor'
+local myqLampFamilyName = 'lamp'
 local doorDeviceProfile = 'MyQDoor.v1'
 local lampDeviceProfile = 'MyQLamp.v1'
 local authIsBad = false
 local consecutiveFailureCount = 0
-local consecutiveFailureThreshold = 10
+local consecutiveFailureThreshold = 20
 
 local command_handler = {}
 
@@ -90,7 +92,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     for devNumber, devObj in pairs(raw_data) do
 
       --Doors and lamp modules
-      if devObj.device_type == 'garagedooropener' or devObj.device_type == 'lamp' then
+      if devObj.device_family == myqDoorFamilyName or devObj.device_family == myqLampFamilyName then
         myqDeviceCount = myqDeviceCount + 1
         local deviceExists = false
         local stDevice
@@ -121,7 +123,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
           end
 
           --Door-specifics
-          if devObj.device_type == 'garagedooropener' then
+          if devObj.device_family == myqDoorFamilyName then
 
             local doorState = devObj.state.door_state
             local stState = stDevice:get_latest_state('main', caps.doorControl.ID, "door", 0)
@@ -139,7 +141,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
           end
 
           --Lamp-specifics
-          if devObj.device_type == 'lamp' then
+          if devObj.device_family == myqLampFamilyName then
 
             local lampState = devObj.state.lamp_state
             local stState = stDevice:get_latest_state('main', caps.switch.switch.ID, "switch", 0)
@@ -157,10 +159,10 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
           if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, devObj.name) then
             log.info('Ready to create ' ..devObj.name ..' ('..devObj.serial_number ..')')
             local profileName
-            if devObj.device_type == 'garagedooropener' then
+            if devObj.device_family == myqDoorFamilyName then
               profileName = doorDeviceProfile
             end
-            if devObj.device_type == 'lamp' then
+            if devObj.device_family == 'lamp' then
               profileName = lampDeviceProfile
             end
 
