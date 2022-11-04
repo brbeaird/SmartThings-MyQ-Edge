@@ -51,7 +51,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
   - As info: Dockerhub image can be found here: https://hub.docker.com/r/brbeaird/smartthings-myq-edge
   - **Reminder: this docker container must be on the same LAN as the SmartThings hub so they can communicate**
   - Pull the image down: `docker pull brbeaird/smartthings-myq-edge`  
-  - Start the container (the command will vary depending on platform (some do not use equal signs), but it will look something like this: `docker run -d --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'`
+  - Start the container. The command will vary depending on platform (some do not use equal signs), but it will look something like this: `docker run -d --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'`
   - What this command does: 
     - -d: runs the container in detached mode, so it continually runs in the background
     - --network=host: sets the container to run with "host" mode, which means running without an extra layer between it and the host. This is very important for IP/Port auto-detect
