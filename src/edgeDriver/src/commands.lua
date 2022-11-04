@@ -156,7 +156,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
         else
 
           --Respect include list setting (if applicable)
-          if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, devObj.name) then
+          if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, devObj.name) ~= nil then
             log.info('Ready to create ' ..devObj.name ..' ('..devObj.serial_number ..')')
             local profileName
             if devObj.device_family == myqDoorFamilyName then
