@@ -57,6 +57,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
     - --network=host: sets the container to run with "host" mode, which means running without an extra layer between it and the host. This is very important for IP/Port auto-detect
     
   - If you know what you are doing and want to run the container in bridge mode: 
+    - Note that with some platforms, UDP broadcast will not work in bridge mode even if you explicitly map the UDP port. If that is the case, autodetection will not work, and you will need to set up the IP/Port manually on the MyQ-Controller device in the SmartThings app.
     - Set the MYQ_SERVER_PORT variable to 8090 (this must be the same port that will be mapped to the host)
     - Map port 8090 TCP, container and host set the same
     - Map UDP 1900, container and host set the same    
