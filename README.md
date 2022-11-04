@@ -62,6 +62,16 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
     - Map UDP 1900, container and host set the same    
     - **Note: This assumes port 8090 is not already in use on your Docker host. You can change it to something else, but be sure to change both the environment variable and the port mapping.**
     - If using IP auto-detection, it is required that the MYQ_SERVER_PORT variable is set to the same port that is mapped to the host. This is because the app needs to know the publicly accessible port is so it can pass that information back to the hub.  
+ - For Synology:
+  ```
+docker run -d --name=myq \
+-e PUID=XXX \
+-e PGID=XXX \
+-e TZ=America/Chicago \
+--net=host \
+--restart always \
+brbeaird/smartthings-myq-edge:latest
+```
  
 ## Advanced Settings (configured in the MyQ-Controller device)
  - MyQ Polling Interval: by default, the Edge driver polls MyQ every 10 seconds to check the status of MyQ devices. You can override that interval here. Note that a frequent interval is recommended if you want SmartThings to accurately catch all open/close events.
