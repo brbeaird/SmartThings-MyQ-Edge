@@ -112,7 +112,7 @@ let expressApp = app.listen(port, () => {
 
 //Set up ssdp
 function startSsdp() {
-  var Server = require('./lib/node-ssdp').Server
+  var Server = require('node-ssdp-response').Server
   , server = new Server(
     {
         location: 'http://' + '' + `:${port}/details`,
