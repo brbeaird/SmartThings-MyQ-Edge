@@ -11,18 +11,31 @@ local httpUtil = require('httpUtil')
 local socket = require('socket')
 local config = require('config')
 
+
+--Custom capability
+local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
+
+--Device type info
 local myqDoorFamilyName = 'garagedoor'
 local myqLampFamilyName = 'lamp'
 local doorDeviceProfile = 'MyQDoor.v1'
 local lampDeviceProfile = 'MyQLamp.v1'
+local lockDeviceProfile = 'MyQLock.v1'
+
+--Prevent spamming bad auth info
 local authIsBad = false
+
+--Allow for occasional MyQ errors
 local consecutiveFailureCount = 0
 local consecutiveFailureThreshold = 20
 
+--Handle skipping a refresh iteration if a command was just issued
+local commandIsPending = false
+
+--Main exported object
 local command_handler = {}
 
-local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
-
+--Allow resetting auth flag from outside
 function command_handler.resetAuth()
   authIsBad = false
 end
@@ -30,6 +43,12 @@ end
 ------------------
 -- Refresh command
 function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
+
+  if commandIsPending == true then
+    log.info('Skipping refresh to let command settle.')
+    commandIsPending = false
+    return
+  end
 
   if authIsBad == true then
     log.info('Bad auth.')
@@ -89,10 +108,10 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
     --Loop over latest data from MyQ
     local myqDeviceCount = 0
-    for devNumber, devObj in pairs(raw_data) do
+    for devNumber, myqDevice in pairs(raw_data) do
 
       --Doors and lamp modules
-      if devObj.device_family == myqDoorFamilyName or devObj.device_family == myqLampFamilyName then
+      if myqDevice.device_family == myqDoorFamilyName or myqDevice.device_family == myqLampFamilyName then
         myqDeviceCount = myqDeviceCount + 1
         local deviceExists = false
         local stDevice
@@ -100,7 +119,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
         --Determine if device exists in SmartThings
         local device_list = driver:get_devices() --Grab existing devices
         for _, device in ipairs(device_list) do
-          if device.device_network_id == devObj.serial_number then
+          if device.device_network_id == myqDevice.serial_number then
             deviceExists = true
             stDevice = device
           end
@@ -123,28 +142,45 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
           end
 
           --Door-specifics
-          if devObj.device_family == myqDoorFamilyName then
+          if myqDevice.device_family == myqDoorFamilyName and myqDevice then
+            local doorState = myqDevice.state.door_state
 
-            local doorState = devObj.state.door_state
-            local stState = stDevice:get_latest_state('main', caps.doorControl.ID, "door", 0)
+            --Doors
+            if (stDevice.vendor_provided_label == doorDeviceProfile) then
+              local stState = stDevice:get_latest_state('main', caps.doorControl.ID, "door", "unknown")
+              if stState ~= doorState then
+                stDevice:emit_event(caps.doorControl.door(doorState))
 
-            if stState ~= doorState then
-              log.trace('Door ' ..stDevice.label .. ': setting status to ' ..doorState)
-              stDevice:emit_event(caps.doorControl.door(doorState))
+                --Door/switch
+                if doorState == 'closed' then
+                  stDevice:emit_event(caps.switch.switch.off())
+                else
+                  stDevice:emit_event(caps.switch.switch.on())
+                end
+              end
+            end
 
-              if doorState == 'closed' then
-                stDevice:emit_event(caps.switch.switch.off())
+            --Locks
+            if (stDevice.vendor_provided_label == lockDeviceProfile) then
+              local lockStatus
+              if doorState == 'closed' or doorStatus == 'closing' then
+                lockStatus = 'locked'
               else
-                stDevice:emit_event(caps.switch.switch.on())
+                lockStatus = 'unlocked'
+              end
+              local stState = stDevice:get_latest_state('main', caps.lock.ID, "lock", "unknown")
+              if stState ~= lockStatus then
+                log.trace('Lock ' ..stDevice.label .. ': setting status to ' ..lockStatus)
+                stDevice:emit_event(caps.lock.lock(lockStatus))
               end
             end
           end
 
           --Lamp-specifics
-          if devObj.device_family == myqLampFamilyName then
+          if myqDevice.device_family == myqLampFamilyName then
 
-            local lampState = devObj.state.lamp_state
-            local stState = stDevice:get_latest_state('main', caps.switch.switch.ID, "switch", 0)
+            local lampState = myqDevice.state.lamp_state
+            local stState = stDevice:get_latest_state('main', caps.switch.switch.ID, "switch", "unknown")
 
             if stState ~= lampState then
               log.trace('Lamp ' ..stDevice.label .. ': setting status to ' ..lampState)
@@ -156,22 +192,32 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
         else
 
           --Respect include list setting (if applicable)
-          if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, devObj.name) ~= nil then
-            log.info('Ready to create ' ..devObj.name ..' ('..devObj.serial_number ..')')
+          if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, myqDevice.name) ~= nil then
+
             local profileName
-            if devObj.device_family == myqDoorFamilyName then
-              profileName = doorDeviceProfile
+
+            --Door/lock
+            if myqDevice.device_family == myqDoorFamilyName then
+              if myQController.preferences.useLocks ~= true then
+                profileName = doorDeviceProfile
+              else
+                profileName = lockDeviceProfile
+              end
             end
-            if devObj.device_family == 'lamp' then
+
+            --Lamp
+            if myqDevice.device_family == 'lamp' then
               profileName = lampDeviceProfile
             end
 
+            log.info('Ready to create ' ..myqDevice.name ..' ('..myqDevice.serial_number ..') ' ..profileName)
+
             local metadata = {
               type = 'LAN',
-              device_network_id = devObj.serial_number,
-              label = devObj.name,
+              device_network_id = myqDevice.serial_number,
+              label = myqDevice.name,
               profile = profileName,
-              manufacturer = devObj.device_platform,
+              manufacturer = myqDevice.device_platform,
               model = myQController.model,
               vendor_provided_label = profileName,
               parent_device_id = myQController.id
@@ -179,7 +225,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
             assert (driver:try_create_device(metadata), "failed to create device")
             installedDeviceCount = installedDeviceCount + 1
           else
-            --log.info(devObj.name ..' not found in device inclusion list.')
+            --log.info(myqDevice.name ..' not found in device inclusion list.')
           end
         end
       end
@@ -256,78 +302,99 @@ end
 ----------------
 -- Device commands
 
---Open
-function command_handler.open(driver, device)
-  log.trace('Sending door open command: ')
-  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command='open', auth=getLoginDetails(driver)})
+--Door--
+function command_handler.doorControl(driver, device, commandParam)
+  commandIsPending = true
+  local command = commandParam.command
+  log.trace('Sending door command: ' ..command)
+  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command=command, auth=getLoginDetails(driver)})
+
+  local pendingStatus
+  if command == 'open' then
+    pendingStatus = 'opening'
+  else
+    pendingStatus = 'closing'
+  end
+
   if success then
-    log.trace('Success. Setting door to opening')
-    device:emit_event(caps.doorControl.door('opening'))
-    return
+    return device:emit_event(caps.doorControl.door(pendingStatus))
   end
   log.error('no response from device')
-  device:emit_event(myqStatusCap.statusText('OPEN command failed'))
-  return false
+  return device:emit_event(myqStatusCap.statusText(command ..' command failed'))
 end
 
---Close
-function command_handler.close(driver, device)
-  log.trace('Sending door close command: ')
-  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command='close', auth=getLoginDetails(driver)})
-  if success then
-    log.trace('Success. Setting door to closing')
-    device:emit_event(caps.doorControl.door('closing'))
-    return
-  end
-  log.error('no response from device')
-  device:emit_event(myqStatusCap.statusText('CLOSE command failed'))
-  return false
-end
 
---On
-function command_handler.on(driver, device)
-  log.trace('Sending ON command: ' ..device.vendor_provided_label)
+--Switch--
+function command_handler.switchControl(driver, device, commandParam)
+  local command = commandParam.command
+  log.trace('Sending switch command: ' ..command)
+
+  --If this is a door, jump over to open/close
   if (device.vendor_provided_label == doorDeviceProfile) then
-    command_handler.open(driver, device)
-    return
+    if command == 'on' then
+      return command_handler.doorControl(driver, device, {command='open'})
+    else
+      return command_handler.doorControl(driver, device, {command='close'})
+    end
   end
-  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command='on', auth=getLoginDetails(driver)})
 
+  --Send it
+  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command=command, auth=getLoginDetails(driver)})
+
+  --Handle result
   if success then
-    log.trace('Success. Setting switch to on')
-    return
-    device:emit_event(caps.switch.switch.on())
+    if command == 'on' then
+      return device:emit_event(caps.switch.switch.on())
+    else
+      return device:emit_event(caps.switch.switch.off())
+    end
   end
+
+  --Handle bad result
   log.error('no response from device')
-  device:emit_event(myqStatusCap.statusText('ON command failed'))
+  device:emit_event(myqStatusCap.statusText(command ..' command failed'))
   return false
 end
 
---Off
-function command_handler.off(driver, device)
-  log.trace('Sending OFF command: ')
-  if (device.vendor_provided_label == doorDeviceProfile) then
-    command_handler.close(driver, device)
-    return
-  end
-  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command='off', auth=getLoginDetails(driver)})
+--Lock--
+function command_handler.lockControl(driver, device, commandParam)
+  commandIsPending = true
+  local command = commandParam.command
+  log.trace('Sending lock command: ' ..command)
 
+  --Translate to door commands
+  local doorCommand
+  if (command == 'unlock') then
+    doorCommand = 'open'
+  else
+    doorCommand = 'close'
+  end
+
+  --Send it
+  local success = httpUtil.send_lan_command(device.model ..'/' ..device.device_network_id, 'POST', 'control', {command=doorCommand, auth=getLoginDetails(driver)})
+
+  --Handle result
   if success then
-    log.trace('Success. Setting switch to off')
-    return
-    device:emit_event(caps.switch.switch.off())
+    commandIsPending = true
+    device:emit_event(myqStatusCap.statusText(command ..' in progress..'))
+    if command == 'unlock' then
+      return device:emit_event(caps.lock.lock('unlocked'))
+    else
+      return device:emit_event(caps.lock.lock('locked'))
+    end
   end
-  log.error('no response from device')
-  device:emit_event(myqStatusCap.statusText('OFF command failed'))
-  return false
-end
 
+  --Handle bad result
+  commandIsPending = false
+  log.error('no response from device')
+  device:emit_event(myqStatusCap.statusText(command ..' command failed'))
+  return device:emit_event(caps.lock.lock("unknown"))
+end
 
 function command_handler.getControllerDevice(driver)
   local device_list = driver:get_devices() --Grab existing devices
   for _, device in ipairs(device_list) do
     if device.device_network_id == 'MyQController' then
-      log.info('Found controller.' ..device.device_network_id ..device.model)
       return driver.get_device_info(driver, device.id)
     end
   end
@@ -341,7 +408,6 @@ function getLoginDetails(driver)
   local deviceExists = false
   for _, device in ipairs(device_list) do
     if device.device_network_id == 'MyQController' then
-      log.info('Found controller device. MyQ server set to : ' ..device.device_network_id)
       myQController = driver.get_device_info(driver, device.id)
     end
   end

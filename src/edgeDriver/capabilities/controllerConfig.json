@@ -48,6 +48,14 @@
                 "values": [],
                 "patch": [],
                 "exclusion": []
+            },
+            {
+                "component": "main",
+                "capability": "healthStatus",
+                "version": 1,
+                "values": [],
+                "patch": [],
+                "exclusion": []
             }
         ],
         "actions": [

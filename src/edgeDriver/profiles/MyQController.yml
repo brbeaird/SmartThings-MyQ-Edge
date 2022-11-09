@@ -12,7 +12,7 @@ metadata:
   deviceType: MyQController
   mnmn: SmartThingsCommunity
   ocfDeviceType: oic.d.wirelessrouter
-  vid: 74de4b9d-c555-36d0-a0d8-c04dcdf64ccc
+  vid: 8660066c-2e38-3b97-a70c-4caa2b6e02a5
 preferences:
   - title: "MyQ Email"
     name: email
@@ -63,3 +63,10 @@ preferences:
     definition:
       stringType: text
       default: ""
+  - title: "Configure doors as locks"
+    name: useLocks
+    description: "Use lock capability for more secure "
+    required: true
+    preferenceType: boolean
+    definition:
+      default: false

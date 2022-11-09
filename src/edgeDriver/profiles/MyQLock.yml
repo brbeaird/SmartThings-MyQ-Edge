@@ -1,0 +1,17 @@
+name: MyQLock.v1
+metadata:
+  ocfDeviceType: oic.d.smartlock
+  mnmn: SmartThingsCommunity
+components:
+- id: main
+  capabilities:
+  - id: refresh
+    version: 1
+  - id: lock
+    version: 1
+  - id: towertalent27877.myqstatus
+    version: 1
+  - id: healthCheck
+    version: 1
+  categories:
+  - name: Others

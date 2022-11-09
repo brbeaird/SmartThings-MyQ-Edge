@@ -128,14 +128,20 @@ local driver =
       capability_handlers = {
         -- Door command handler
         [caps.doorControl.ID] = {
-          [caps.doorControl.commands.open.NAME] = commands.open,
-          [caps.doorControl.commands.close.NAME] = commands.close
+          [caps.doorControl.commands.open.NAME] = commands.doorControl,
+          [caps.doorControl.commands.close.NAME] = commands.doorControl
+        },
+
+        -- Lock command handler
+        [caps.lock.ID] = {
+          [caps.lock.commands.lock.NAME] = commands.lockControl,
+          [caps.lock.commands.unlock.NAME] = commands.lockControl
         },
 
         -- Switch command handler
         [caps.switch.ID] = {
-          [caps.switch.commands.on.NAME] = commands.on,
-          [caps.switch.commands.off.NAME] = commands.off
+          [caps.switch.commands.on.NAME] = commands.switchControl,
+          [caps.switch.commands.off.NAME] = commands.switchControl
         },
 
         -- Refresh command handler
