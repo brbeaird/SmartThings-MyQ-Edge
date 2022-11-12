@@ -1,5 +1,6 @@
 name: MyQLamp.v1
 metadata:
+  vid: 00a4a565-8d95-37e9-9f5e-7a8efab5e21f
   ocfDeviceType: oic.d.light
   mnmn: SmartThingsCommunity
 components:
@@ -10,6 +11,10 @@ components:
   - id: switch
     version: 1
   - id: towertalent27877.myqstatus
+    version: 1
+  - id: towertalent27877.myqserveraddress
+    version: 1
+  - id: towertalent27877.health
     version: 1
   - id: healthCheck
     version: 1

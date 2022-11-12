@@ -37,6 +37,13 @@
             "version": 1,
             "values": [],
             "patch": []
+        },
+        {
+            "component": "main",
+            "capability": "towertalent27877.myqserveraddress",
+            "version": 1,
+            "values": [],
+            "patch": []
         }
     ],
     "automation": {
@@ -51,12 +58,12 @@
             },
             {
                 "component": "main",
-                "capability": "healthStatus",
+                "capability": "towertalent27877.health",
                 "version": 1,
                 "values": [],
                 "patch": [],
                 "exclusion": []
-            }
+            },
         ],
         "actions": [
             {

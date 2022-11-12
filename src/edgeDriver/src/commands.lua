@@ -11,9 +11,10 @@ local httpUtil = require('httpUtil')
 local socket = require('socket')
 local config = require('config')
 
-
---Custom capability
-local myqStatusCap = caps[ 'towertalent27877.myqstatus' ]
+--Custom capabilities
+local myqStatusCap = caps['towertalent27877.myqstatus']
+local myqServerAddressCap = caps['towertalent27877.myqserveraddress']
+local healthCap = caps['towertalent27877.health']
 
 --Device type info
 local myqDoorFamilyName = 'garagedoor'
@@ -77,6 +78,16 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     skipScan = 1
   end
 
+  --Update controller server address
+  local currentControllerServerAddress = myQController:get_latest_state('main', "towertalent27877.myqserveraddress", "serverAddress", "unknown")
+  local serverAddress = "Pending"
+  if myQController.model ~= '' then
+    serverAddress = myQController.model
+  end
+  if currentControllerServerAddress ~= serverAddress then
+    myQController:emit_event(myqServerAddressCap.serverAddress(serverAddress))
+  end
+
 --Handle blank auth info
   if myQController.preferences.email == '' or myQController.preferences.password == '' then
     local defaultAuthStatus = 'Awaiting credentials'
@@ -85,6 +96,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
       log.info('No credentials yet. Waiting.' ..currentStatus)
       myQController:emit_event(myqStatusCap.statusText(defaultAuthStatus))
     end
+    consecutiveFailureCount = 100 --Force immediate display of errors once auth is entered
     return
   end
 
@@ -128,17 +140,28 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
         --If this device already exists in SmartThings, update the status
         if deviceExists then
           installedDeviceCount = installedDeviceCount + 1
+
+          --Set health online
           stDevice:online()
+          local currentHealthStatus = stDevice:get_latest_state('main', "towertalent27877.health", "healthStatus", "unknown")
+          if currentHealthStatus ~= 'Online' then
+            stDevice:emit_event(healthCap.healthStatus('Online'))
+          end
+
           local defaultStatus = 'Connected'
           local currentStatus = stDevice:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
           if currentStatus ~= defaultStatus then
             stDevice:emit_event(myqStatusCap.statusText(defaultStatus))
           end
 
-          --Keep URL in sync
+          --Keep URL in sync (model and serverAddress cap)
           if stDevice.model ~= myQController.model then
             log.trace('Device ' ..stDevice.label .. ': updating URL to ' ..myQController.model)
             assert (stDevice:try_update_metadata({model = myQController.model}), 'failed to update device.')
+          end
+          local currentServerAddress = stDevice:get_latest_state('main', "towertalent27877.myqserveraddress", "serverAddress", "unknown")
+          if currentServerAddress ~= myQController.model then
+            stDevice:emit_event(myqServerAddressCap.serverAddress(myQController.model))
           end
 
           --Door-specifics
@@ -151,11 +174,25 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
               if stState ~= doorState then
                 stDevice:emit_event(caps.doorControl.door(doorState))
 
-                --Door/switch
+              --Switch/Contact capabilities
+              local currentSwitchState = stDevice:get_latest_state('main', caps.switch.switch.ID, "switch", "unknown")
+              local currentContactState = stDevice:get_latest_state('main', caps.contactSensor.contact.ID, "contact", "unknown")
+
                 if doorState == 'closed' then
-                  stDevice:emit_event(caps.switch.switch.off())
+                  if currentSwitchState ~= 'off' then
+                    stDevice:emit_event(caps.switch.switch.off())
+                  end
+                  if currentContactState ~= 'closed' then
+                    stDevice:emit_event(caps.contactSensor.contact.closed())
+                  end
+
                 else
-                  stDevice:emit_event(caps.switch.switch.on())
+                  if currentSwitchState ~= 'on' then
+                    stDevice:emit_event(caps.switch.switch.on())
+                  end
+                  if currentContactState ~= 'open' then
+                    stDevice:emit_event(caps.contactSensor.contact.open())
+                  end
                 end
               end
             end
@@ -192,7 +229,19 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
         else
 
           --Respect include list setting (if applicable)
-          if myQController.preferences.includeList == '' or string.find(myQController.preferences.includeList, myqDevice.name) ~= nil then
+          local deviceIncluded = false
+          if myQController.preferences.includeList == '' then
+            deviceIncluded = true
+          else
+            deviceIncluded = false
+            for i in string.gmatch(myQController.preferences.includeList, "([^,]+)") do
+              if i == myqDevice.name then
+                deviceIncluded = true
+              end
+           end
+          end
+
+          if deviceIncluded == true then
 
             local profileName
 
@@ -271,7 +320,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     --If refresh failed with no response at all, try a UDP search to try and auto detect the server (maybe the IP or port changed)
     log.error('Refresh Failed.')
 
-    if (skipScan ~= 1 and (res_body == nil or code == 404 )) then
+    if (skipScan ~= 1) then
       doBroadcast(driver, device, myQController)
     end
   end

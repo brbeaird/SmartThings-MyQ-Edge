@@ -6,13 +6,17 @@ components:
     version: 1
   - id: towertalent27877.myqstatus
     version: 1
+  - id: towertalent27877.myqserveraddress
+    version: 1
+  - id: towertalent27877.health
+    version: 1
   - id: healthCheck
     version: 1
 metadata:
   deviceType: MyQController
   mnmn: SmartThingsCommunity
   ocfDeviceType: oic.d.wirelessrouter
-  vid: 8660066c-2e38-3b97-a70c-4caa2b6e02a5
+  vid: f5790fc6-81a2-3602-97e1-068665e29546
 preferences:
   - title: "MyQ Email"
     name: email

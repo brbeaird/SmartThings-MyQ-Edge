@@ -1,0 +1,45 @@
+{
+    "dashboard": {
+        "states": [
+            {
+                "label": "Status: {{healthStatus.value}}"
+            }
+        ],
+        "actions": [],
+        "basicPlus": []
+    },
+    "detailView": [
+        {
+            "label": "Status",
+            "displayType": "state",
+            "state": {
+                "label": "{{healthStatus.value}}"
+            }
+        }
+    ],
+    "automation": {
+        "conditions": [
+            {
+                "label": "Health",
+                "displayType": "list",
+                "list": {
+                    "alternatives": [
+                        {
+                            "key": "Online",
+                            "value": "Online",
+                            "type": "active"
+                        },
+                        {
+                            "key": "Offline",
+                            "value": "Offline",
+                            "type": "active"
+                        }
+                    ],
+                    "value": "healthStatus.value"
+                }
+            }
+        ]
+    },
+    "id": "towertalent27877.health",
+    "version": 1
+}

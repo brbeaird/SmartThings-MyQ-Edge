@@ -1,6 +1,6 @@
 name: MyQDoor.v1
 metadata:
-  vid: 3d0a44d5-0bd6-3b99-b754-ab6f439fdeb9
+  vid: 9ad635c4-c5b6-34f6-97b9-ab1f5f9d9c4f
   ocfDeviceType: oic.d.garagedoor
   mnmn: SmartThingsCommunity
 components:
@@ -14,5 +14,11 @@ components:
     version: 1
   - id: towertalent27877.myqstatus
     version: 1
+  - id: towertalent27877.myqserveraddress
+    version: 1
+  - id: towertalent27877.health
+    version: 1
   - id: healthCheck
     version: 1
+  - id: contactSensor
+  version: 1

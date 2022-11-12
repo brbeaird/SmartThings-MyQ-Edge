@@ -1,10 +1,9 @@
-
 {
     "dashboard": {
         "states": [
             {
                 "component": "main",
-                "capability": "doorControl",
+                "capability": "switch",
                 "version": 1,
                 "idx": 0,
                 "group": "main",
@@ -15,7 +14,7 @@
         "actions": [
             {
                 "component": "main",
-                "capability": "doorControl",
+                "capability": "switch",
                 "version": 1,
                 "idx": 0,
                 "group": "main",
@@ -27,20 +26,19 @@
     "detailView": [
         {
             "component": "main",
-            "capability": "doorControl",
-            "version": 1,
-            "values": [],
-            "patch": []
-        },
-        {
-            "component": "main",
             "capability": "refresh",
             "version": 1,
             "values": [],
             "patch": []
         },
         {
-            "label": "Status",
+            "component": "main",
+            "capability": "switch",
+            "version": 1,
+            "values": [],
+            "patch": []
+        },
+        {
             "component": "main",
             "capability": "towertalent27877.myqstatus",
             "version": 1,
@@ -48,7 +46,6 @@
             "patch": []
         },
         {
-            "label": "Server Address",
             "component": "main",
             "capability": "towertalent27877.myqserveraddress",
             "version": 1,
@@ -60,7 +57,7 @@
         "conditions": [
             {
                 "component": "main",
-                "capability": "doorControl",
+                "capability": "switch",
                 "version": 1,
                 "values": [],
                 "patch": [],
@@ -68,7 +65,16 @@
             },
             {
                 "component": "main",
-                "capability": "switch",
+                "label": "Status",
+                "capability": "towertalent27877.myqstatus",
+                "version": 1,
+                "values": [],
+                "patch": [],
+                "exclusion": []
+            },
+            {
+                "component": "main",
+                "capability": "towertalent27877.myqserveraddress",
                 "version": 1,
                 "values": [],
                 "patch": [],
@@ -84,7 +90,7 @@
             },
             {
                 "component": "main",
-                "capability": "contactSensor",
+                "capability": "healthCheck",
                 "version": 1,
                 "values": [],
                 "patch": [],
@@ -92,14 +98,6 @@
             }
         ],
         "actions": [
-            {
-                "component": "main",
-                "capability": "doorControl",
-                "version": 1,
-                "values": [],
-                "patch": [],
-                "exclusion": []
-            },
             {
                 "component": "main",
                 "capability": "refresh",
@@ -111,6 +109,14 @@
             {
                 "component": "main",
                 "capability": "switch",
+                "version": 1,
+                "values": [],
+                "patch": [],
+                "exclusion": []
+            },
+            {
+                "component": "main",
+                "capability": "towertalent27877.myqstatus",
                 "version": 1,
                 "values": [],
                 "patch": [],

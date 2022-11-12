@@ -2,7 +2,7 @@
     "dashboard": {
         "states": [
             {
-                "label": "Status: {{statusText.value}}"
+                "label": "Server Address: {{serverAddress.value}}"
             }
         ],
         "actions": [],
@@ -10,13 +10,13 @@
     },
     "detailView": [
         {
-            "label": "Status",
+            "label": "MyQ Server Address",
             "displayType": "state",
             "state": {
-                "label": "{{statusText.value}}"
+                "label": "{{serverAddress.value}}"
             }
         }
     ],
-    "id": "towertalent27877.myqstatus",
-    "version": 3
+    "id": "towertalent27877.myqserveraddress",
+    "version": 2
 }
