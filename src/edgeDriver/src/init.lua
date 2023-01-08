@@ -4,7 +4,7 @@ local log = require('log')
 local socket = require('socket')
 local config = require('config')
 local httpUtil = require('httpUtil')
-local cosock = require('cosock').socket
+local cosock = require('cosock')
 local commands = require('commands')
 local lux = require('luxure')
 local json = require('dkjson')
@@ -157,13 +157,16 @@ local driver =
 local hub_server = {}
 
 function hub_server.start(driver)
-  local server = lux.Server.new_with(cosock.tcp(), {env='debug'})
+  local server = lux.Server.new_with(cosock.socket.tcp(), { env = 'debug' })
 
-  -- Register server
-  driver:register_channel_handler(server.sock, function ()
-    server:tick()
-  end)
+  server:listen()
+  log.trace('Server listening on ' ..server.ip ..':' ..server.port)
 
+  cosock.spawn(function()
+    while true do
+      server:tick(log.error)
+    end
+  end, "server run loop")
 
   --Handles incoming ping from MyQ server when responding to ssdp broadcast
   server:post('/ping', function (req, res)
@@ -182,8 +185,6 @@ function hub_server.start(driver)
     assert (myQController:try_update_metadata({model = 'http://' ..myqServerUrl}), 'failed to update device.')
   end)
 
-  server:listen()
-  log.trace('Server listening on ' ..server.ip ..':' ..server.port)
   driver.server = server
 end
 

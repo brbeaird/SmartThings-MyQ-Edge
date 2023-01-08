@@ -90,6 +90,7 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
 --Handle blank auth info
   if myQController.preferences.email == '' or myQController.preferences.password == '' then
+    log.info('No credentials yet. Waiting.')
     local defaultAuthStatus = 'Awaiting credentials'
     local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
     if currentStatus ~= defaultAuthStatus then
@@ -327,6 +328,12 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 end
 
 function doBroadcast(driver, device, myQController)
+  local defaultLookingStatus = 'Searching for bridge server'
+  local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
+  if currentStatus ~= defaultLookingStatus then
+    myQController:emit_event(myqStatusCap.statusText(defaultLookingStatus))
+  end
+
   if driver.server.ip == nil then
     log.info('Refresh: waiting for driver http startup')
     return

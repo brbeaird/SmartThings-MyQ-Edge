@@ -134,11 +134,13 @@ function startSsdp() {
       }
       let hubAddress = `http://${headers.SERVER_IP}:${headers.SERVER_PORT}/ping`
       log(`Detected SSDP broadcast. Posting details back to server at ${hubAddress}`)
-      await axios.post(hubAddress,
+      let response = await axios.post(hubAddress,
         {
           myqServerPort: port,
           deviceId: headers.DEVICE_ID
-        })
+        },
+        {timeout: 5000})
+      log(`Got status ${response.status} from hub.`);
     } catch (error) {
         let msg = error.message;
         if (error.response){
