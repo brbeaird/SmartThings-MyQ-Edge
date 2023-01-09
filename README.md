@@ -40,7 +40,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
   
   
 ## Running the bridge server with an executable
- - Find the executable [for your OS here](https://github.com/brbeaird/SmartThings-MyQ-Edge/tree/main/src/server/bin) 
+ - Find the executable [for your OS here](https://github.com/brbeaird/SmartThings-MyQ-Edge/releases) 
  - Download it
  - Run the executable. After several seconds, you should see a message indicating it is waiting for a connection from the hub.
  - By default, the http server spins up on a random port. If you want to specify one, set the MYQ_SERVER_PORT environment variable on your system.
@@ -59,8 +59,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
   - If you know what you are doing and want to run the container in bridge mode: 
     - Note that with some platforms, UDP broadcast will not work in bridge mode even if you explicitly map the UDP port. If that is the case, autodetection will not work, and you will need to set up the IP/Port manually on the MyQ-Controller device in the SmartThings app.
     - Set the MYQ_SERVER_PORT variable to 8090 (this must be the same port that will be mapped to the host)
-    - Map port 8090 TCP, container and host set the same
-    - Map UDP 1900, container and host set the same    
+    - Map port 8090 TCP, container and host set the same    
     - **Note: This assumes port 8090 is not already in use on your Docker host. You can change it to something else, but be sure to change both the environment variable and the port mapping.**
     - If using IP auto-detection, it is required that the MYQ_SERVER_PORT variable is set to the same port that is mapped to the host. This is because the app needs to know the publicly accessible port is so it can pass that information back to the hub.  
  - For Synology:
