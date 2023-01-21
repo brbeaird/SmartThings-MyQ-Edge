@@ -115,7 +115,7 @@ function startSsdp() {
   var Server = require('node-ssdp-response').Server
   , server = new Server(
     {
-        location: 'http://' + '' + `:${port}/details`,
+        location: 'http://' + '0.0.0.0' + `:${port}/details`,
         udn: 'uuid:smartthings-brbeaird-myq',
           sourcePort: 1900,
         ssdpTtl: 2
