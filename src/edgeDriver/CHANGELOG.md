@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023-01-21T00:09:47.988015388
+
+### Fixed
+ - Fixed issue where health status capability was not updated when the device goes offline
+
 ## 2023-01-08T17:59:33.968127516
 
 ### Fixed

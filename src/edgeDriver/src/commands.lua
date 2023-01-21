@@ -310,6 +310,14 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
       local device_list = driver:get_devices() --Grab existing devices
       for _, device in ipairs(device_list) do
         device:offline()
+
+        --Set health status cap (needed for routines)
+        local currentHealthStatus = device:get_latest_state('main', "towertalent27877.health", "healthStatus", "unknown")
+        if currentHealthStatus ~= 'Offline' then
+          device:emit_event(healthCap.healthStatus('Offline'))
+        end
+
+        --Sets status text
         local currentStatus = device:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
         if currentStatus ~= offlineStatus then
           log.info('Setting offline' ..currentStatus)
