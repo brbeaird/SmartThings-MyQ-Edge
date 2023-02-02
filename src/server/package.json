@@ -2,7 +2,7 @@
   "name": "myqnode",
   "author": "Brian Beaird",
   "repository": "https://github.com/brbeaird/SmartThings-MyQ-Edge.git",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Node agent for MyQ and SmartThings Edge",
   "main": "server.js",
   "scripts": {

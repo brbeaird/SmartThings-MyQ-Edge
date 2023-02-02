@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 (2023-02-01)
+
+### Added
+ - Added version check
+
+### Fixed
+ - Broadcast valid IP in SSDP payload
+
 ## 1.0.1 (2023-01-08)
 
 ### Fixed

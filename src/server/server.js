@@ -1,4 +1,5 @@
 var port = process.env.MYQ_SERVER_PORT || 0
+const { version: VERSION } = require('./package.json');
 const axios = require('axios');
 var express = require('express');
 var app = express();
@@ -125,6 +126,11 @@ function startSsdp() {
   server.start();
   log(`SSDP server up and listening for broadcasts: ${Object.keys(server._usns)[0]}`)
 
+  checkVersion();
+  setInterval(() => {
+    checkVersion();
+  }, 1000*60);
+
   //I tweaked ssdp library to bubble up a broadcast event and to then do an http post to the URL
   // this is because this app cannot know its external IP if running as a docker container
   server.on('response', async function (headers, msg, rinfo) {
@@ -149,6 +155,21 @@ function startSsdp() {
       log(msg, true);
     }
   });
+}
+
+async function checkVersion(){
+  try {
+    let response = await axios.post('https://version.brbeaird.com/getVersion',
+    {
+      app: 'myqEdge',
+      currentVersion: VERSION
+    },
+    {timeout: 15000})
+  if (response.data?.version && response.data?.version != VERSION){
+    log(`Newer server version is available (${VERSION} => ${response.data?.version})`);
+  }
+  return;
+  } catch (error) {}
 }
 
 //Logging with timestamp
