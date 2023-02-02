@@ -129,7 +129,7 @@ function startSsdp() {
   checkVersion();
   setInterval(() => {
     checkVersion();
-  }, 1000*60);
+  }, 1000*60*60); //Check every hour
 
   //I tweaked ssdp library to bubble up a broadcast event and to then do an http post to the URL
   // this is because this app cannot know its external IP if running as a docker container
