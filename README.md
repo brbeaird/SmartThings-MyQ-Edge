@@ -72,6 +72,10 @@ docker run -d --name=myq \
 --restart always \
 brbeaird/smartthings-myq-edge:latest
 ```
+ - For Raspberry Pi 4:
+```
+docker run -d --security-opt=seccomp=unconfined --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'
+```
  
 ## Advanced Settings (configured in the MyQ-Controller device)
  - MyQ Polling Interval: by default, the Edge driver polls MyQ every 10 seconds to check the status of MyQ devices. You can override that interval here. Note that a frequent interval is recommended if you want SmartThings to accurately catch all open/close events.
