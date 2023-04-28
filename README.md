@@ -74,7 +74,7 @@ brbeaird/smartthings-myq-edge:latest
 ```
  - For Raspberry Pi 4:
 ```
-docker run -d --security-opt=seccomp=unconfined --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'
+docker run -d --security-opt=seccomp=unconfined --restart='always' --name='smartthings-myq-edge' --network=host 'brbeaird/smartthings-myq-edge:latest'
 ```
  
 ## Advanced Settings (configured in the MyQ-Controller device)
