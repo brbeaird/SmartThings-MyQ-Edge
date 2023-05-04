@@ -23,7 +23,7 @@ This SmartApp integrates Chamberlain/LiftMaster MyQ doors and plug-in lamp modul
   
 
 ## Installation
-  - Add the "MyQ Connector" Edge driver to your SmartThings hub - [click here to add the driver channel](https://bestow-regional.api.smartthings.com/invite/BxlrLZK3GxMP)
+  - Add the "MyQ Connector" Edge driver to your SmartThings hub - [click here to add the driver channel and install the driver](https://bestow-regional.api.smartthings.com/invite/BxlrLZK3GxMP)
   - Decide how you will host the bridge server on your LAN ([details on methods below](#running-the-bridge-server-with-docker-recommended)).
     - Using Docker
     - Using a simple executable
