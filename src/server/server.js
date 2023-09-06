@@ -5,11 +5,13 @@ var express = require('express');
 var app = express();
 app.use(express.json());
 
-const myQApi = require('@hjdhjd/myq'); //Much thanks to hjdhjd for this
+const myQApi = require('@brbeaird/myq'); //Much thanks to hjdhjd for this
 var myqEmail;
 var myqPassword;
 var myq; //Holds MyQ connection object
 var myQDeviceMap = {} //Local cache of devices and their statuses
+var searchPending = false;
+var updateAvailable = false;
 
 const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP auto-discovery
 
@@ -27,7 +29,7 @@ function myqLogin(email, password){
     }
 
     //Save it
-    log('Got new username/password from hub. Initializing connection.')
+    log('Got new username/password from hub. Initializing connection to MyQ.')
     myq = new myQApi.myQApi(email, password);
     myqEmail = email;
     myqPassword = password;
@@ -47,12 +49,21 @@ app.post('/devices', async (req, res) => {
     let refreshResult = await myq.refreshDevices();
     if (!refreshResult){
       log(`Refresh failed`, 1);
-      return res.sendStatus(401);
+      myqEmail = '';
+      myqPassword = '';
+      throw new Error('refresh failed');
     }
 
     //Check for devices
     if (myq.devices && myq.devices.length > 0){
-      res.send(myq.devices);
+      let responseToHub = {
+        meta: {
+          version: VERSION,
+          updateAvailable: updateAvailable
+        },
+        devices: myq.devices
+      }
+      res.send(responseToHub);
       for (let device of myq.devices){
         myQDeviceMap[device.serial_number] = device;
       }
@@ -107,6 +118,7 @@ app.get('/status', async (req, res) => {
 //Express webserver startup
 let expressApp = app.listen(port, () => {
   port = expressApp.address().port
+  log(`SmartThings MyQ Bridge server: Version: ${VERSION}`);
   log(`HTTP server listening on port ${port}`);
   startSsdp();
 })
@@ -124,7 +136,7 @@ function startSsdp() {
   );
   server.addUSN(ssdpId);
   server.start();
-  log(`SSDP server up and listening for broadcasts: ${Object.keys(server._usns)[0]}`)
+  log(`Auto-discovery module listening for SmartThings hub requests`);
 
   checkVersion();
   setInterval(() => {
@@ -135,18 +147,19 @@ function startSsdp() {
   // this is because this app cannot know its external IP if running as a docker container
   server.on('response', async function (headers, msg, rinfo) {
     try {
-      if (headers.ST != ssdpId || !headers.SERVER_IP || !headers.SERVER_PORT){
+      if (searchPending || headers.ST != ssdpId || !headers.SERVER_IP || !headers.SERVER_PORT){
         return;
       }
+      searchPending = true;
       let hubAddress = `http://${headers.SERVER_IP}:${headers.SERVER_PORT}/ping`
-      log(`Detected SSDP broadcast. Posting details back to server at ${hubAddress}`)
+      log(`Detected auto-discovery request from SmartThings Hub (${hubAddress}). Replying with bridge server URL.`)
       let response = await axios.post(hubAddress,
         {
           myqServerPort: port,
           deviceId: headers.DEVICE_ID
         },
         {timeout: 5000})
-      log(`Got status ${response.status} from hub.`);
+      log(`SmartThings hub acknowledged auto-discovery response (status: ${response.status}). If this message repeats, it means the hub cannot connect to this server's URL due to firewall or network issues.`);
     } catch (error) {
         let msg = error.message;
         if (error.response){
@@ -166,6 +179,7 @@ async function checkVersion(){
     },
     {timeout: 15000})
   if (response.data?.version && response.data?.version != VERSION){
+    updateAvailable = true;
     log(`Newer server version is available (${VERSION} => ${response.data?.version})`);
   }
   return;

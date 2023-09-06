@@ -22,13 +22,14 @@ local myqLampFamilyName = 'lamp'
 local doorDeviceProfile = 'MyQDoor.v1'
 local lampDeviceProfile = 'MyQLamp.v1'
 local lockDeviceProfile = 'MyQLock.v1'
+local updateAvailable = false
 
 --Prevent spamming bad auth info
 local authIsBad = false
 
 --Allow for occasional MyQ errors
 local consecutiveFailureCount = 0
-local consecutiveFailureThreshold = 20
+local consecutiveFailureThreshold = 10
 
 --Handle skipping a refresh iteration if a command was just issued
 local commandIsPending = false
@@ -119,9 +120,22 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     consecutiveFailureCount = 0
     local installedDeviceCount = 0
 
+    --New versions have a top-level object
+    local myqDevices
+    if raw_data.meta then
+      myqDevices = raw_data.devices
+      if raw_data.meta.updateAvailable == true then
+        updateAvailable = true
+      else
+        updateAvailable = false
+      end
+    else
+      myqDevices = raw_data
+    end
+
     --Loop over latest data from MyQ
     local myqDeviceCount = 0
-    for devNumber, myqDevice in pairs(raw_data) do
+    for devNumber, myqDevice in pairs(myqDevices) do
 
       --Doors and lamp modules
       if myqDevice.device_family == myqDoorFamilyName or myqDevice.device_family == myqLampFamilyName then
@@ -285,6 +299,9 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     log.info('Refresh successful via ' ..myQController.model ..'. MyQ devices: ' ..myqDeviceCount ..', ST-installed devices: ' ..installedDeviceCount)
     myQController:online()
     local newStatus = 'Connected: ' ..installedDeviceCount ..' devices'
+    if updateAvailable == true then
+      newStatus = newStatus ..' (Bridge server update available)'
+    end
     local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
     if currentStatus ~= newStatus then
       myQController:emit_event(myqStatusCap.statusText(newStatus))
@@ -336,11 +353,6 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 end
 
 function doBroadcast(driver, device, myQController)
-  local defaultLookingStatus = 'Searching for bridge server'
-  local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
-  if currentStatus ~= defaultLookingStatus then
-    myQController:emit_event(myqStatusCap.statusText(defaultLookingStatus))
-  end
 
   if driver.server.ip == nil then
     log.info('Refresh: waiting for driver http startup')

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023-09-02T15:52:20.910700768
+
+### Updated
+ - Add version check message
+
 ## 2023-01-21T00:09:47.988015388
 
 ### Fixed
