@@ -1,12 +1,12 @@
 # Changelog
 
-## 1.0.3 (2023-09-06)
+## 1.0.5 (2023-09-13)
 
 ### Updated
- - Updated myQ library
- - Clarified logging and version text
+ - Add automatic MyQ region failover
+ - Improve error handling and logging
 
-## 1.0.2 (2023-02-01)
+## 1.0.4 (2023-02-01)
 
 ### Added
  - Added version check

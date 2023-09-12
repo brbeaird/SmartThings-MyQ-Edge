@@ -1,5 +1,10 @@
 # Changelog
 
+## 2023-09-12T19:40:09.369702336
+
+### Updated
+ - Improved error handling and logging
+
 ## 2023-09-02T15:52:20.910700768
 
 ### Updated
