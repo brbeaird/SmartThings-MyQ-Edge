@@ -6,7 +6,7 @@ local http = cosock2.asyncify "socket.http"
 local log = require('log')
 
 local http_handler = {}
-http.TIMEOUT = 5
+http.TIMEOUT = 10
 
 ------------------------
 -- Send LAN HTTP Request
