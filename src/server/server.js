@@ -12,6 +12,8 @@ var myq; //Holds MyQ connection object
 var myQDeviceMap = {} //Local cache of devices and their statuses
 var searchPending = false;
 var updateAvailable = false;
+var reAuth = true;
+var region = 'east';
 
 const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP auto-discovery
 
@@ -19,22 +21,33 @@ const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP au
 //Set credentials on myq object (these are always passed-in from calls from the ST hub)
 function myqLogin(email, password){
 
+  //Handle missing info
+  if (!email || !password){
+    log('Missing username or password.')
+    return false;
+  }
+
   //If password has been updated, set up new API object
   if (email != myqEmail || password != myqPassword){
-
-    //Handle missing info
-    if (!email || !password){
-      log('Missing username or password.')
-      return false;
-    }
-
-    //Save it
-    log('Got new username/password from hub. Initializing connection to MyQ.')
-    myq = new myQApi.myQApi(email, password);
+    reAuth = true;
+    log('Got new username/password from hub.');
     myqEmail = email;
     myqPassword = password;
   }
+
+  //Connect
+  if (reAuth){
+    log(`Initializing connection to MyQ-${region}.`);
+    myq = new myQApi.myQApi(email, password, undefined, region);
+  }
+
+  reAuth = false;
   return true;
+}
+
+function toggleRegion(){
+  reAuth = true;
+  region = region === 'east' ? 'west' : 'east'
 }
 
 /**Exposed Express routes */
@@ -45,13 +58,18 @@ app.post('/devices', async (req, res) => {
     if (!myqLogin(req.body.auth.email, req.body.auth.password)){
       return res.sendStatus(401);
     }
-
     let refreshResult = await myq.refreshDevices();
     if (!refreshResult){
-      log(`Refresh failed`, 1);
-      myqEmail = '';
-      myqPassword = '';
-      throw new Error('refresh failed');
+      toggleRegion();
+      if (!myq.accessToken){
+        log(`MyQ login failed`, 1);
+        return res.sendStatus(401);
+      }
+      else{
+        log(`Refresh failed`, 1);
+
+        throw new Error('refresh failed');
+      }
     }
 
     //Check for devices
@@ -153,13 +171,13 @@ function startSsdp() {
       searchPending = false;
       let hubAddress = `http://${headers.SERVER_IP}:${headers.SERVER_PORT}/ping`
       log(`Detected auto-discovery request from SmartThings Hub (${hubAddress}). Replying with bridge server URL.`)
-      let response = await axios.post(hubAddress,
+      await axios.post(hubAddress,
         {
           myqServerPort: port,
           deviceId: headers.DEVICE_ID
         },
         {timeout: 5000})
-      log(`SmartThings hub acknowledged auto-discovery response (status: ${response.status}). If this message repeats, it means the hub cannot connect to this server's URL due to firewall or network issues.`);
+      log(`SmartThings hub acknowledged auto-discovery response. If this message repeats, it means the hub received the bridge server IP/Port but cannot connect to it due to firewall or network issues.`);
     } catch (error) {
         let msg = error.message;
         if (error.response){

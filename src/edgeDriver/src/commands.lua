@@ -26,6 +26,8 @@ local updateAvailable = false
 
 --Prevent spamming bad auth info
 local authIsBad = false
+local badAuthCount = 0
+local badAuthThrottleThreshold = 5
 
 --Allow for occasional MyQ errors
 local consecutiveFailureCount = 0
@@ -53,7 +55,14 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
   end
 
   if authIsBad == true then
-    log.info('Bad auth.')
+    log.info('Unable to login to MyQ with credentials. Will try again after a delay. Updating credentials will trigger an instant retry.')
+    badAuthCount = badAuthCount + 1
+    if badAuthCount >= badAuthThrottleThreshold then
+      --Reset to allow trying again
+      authIsBad = false
+      badAuthCount = 0
+
+    end
     return
   end
 
@@ -307,11 +316,11 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
       myQController:emit_event(myqStatusCap.statusText(newStatus))
     end
 
-  elseif code == 401 and firstAuth == 1 then
+  elseif code == 401 then
     --Update all devices to show invalid auth
     local device_list = driver:get_devices() --Grab existing devices
         for _, device in ipairs(device_list) do
-          device:emit_event(myqStatusCap.statusText('Invalid credentials.'))
+          device:emit_event(myqStatusCap.statusText('MyQ login failed'))
         end
     authIsBad = true
     return
@@ -324,6 +333,13 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
 
       --Update all devices to show server offline
       local offlineStatus = 'Error: MyQ Bridge Offline: ' ..myQController.model
+
+      --500 errors mean the bridge server is still up but having MyQ issues
+      if code == 500 then
+        offlineStatus = 'Error: Bridge server unable to refresh MyQ devices: ' ..table.concat(res_body)
+        skipScan = 1
+      end
+
       local device_list = driver:get_devices() --Grab existing devices
       for _, device in ipairs(device_list) do
         device:offline()
@@ -347,12 +363,23 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
     log.error('Refresh Failed.')
 
     if (skipScan ~= 1) then
-      doBroadcast(driver, device, myQController)
+      local scanReason = ''
+      if code ~= undefined then
+        scanReason = 'last result: ' ..code
+      end
+
+      doBroadcast(driver, device, myQController, scanReason)
     end
   end
 end
 
-function doBroadcast(driver, device, myQController)
+function doBroadcast(driver, device, myQController, reason)
+
+  local defaultLookingStatus = 'Searching for bridge server'
+  local currentStatus = myQController:get_latest_state('main', "towertalent27877.myqstatus", "statusText", "unknown")
+  if currentStatus ~= defaultLookingStatus then
+    myQController:emit_event(myqStatusCap.statusText(defaultLookingStatus))
+  end
 
   if driver.server.ip == nil then
     log.info('Refresh: waiting for driver http startup')
