@@ -168,7 +168,7 @@ function startSsdp() {
       if (searchPending || headers.ST != ssdpId || !headers.SERVER_IP || !headers.SERVER_PORT){
         return;
       }
-      searchPending = false;
+      searchPending = true;
       let hubAddress = `http://${headers.SERVER_IP}:${headers.SERVER_PORT}/ping`
       log(`Detected auto-discovery request from SmartThings Hub (${hubAddress}). Replying with bridge server URL.`)
       await axios.post(hubAddress,
@@ -185,6 +185,7 @@ function startSsdp() {
       }
       log(msg, true);
     }
+    searchPending = false;
   });
 }
 
