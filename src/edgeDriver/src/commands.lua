@@ -5,7 +5,7 @@ local log = require('log')
 local json = require('dkjson')
 local cosock = require "cosock"
 local http = cosock.asyncify "socket.http"
-http.TIMEOUT = 10
+http.TIMEOUT = 15
 local ltn12 = require('ltn12')
 local httpUtil = require('httpUtil')
 local socket = require('socket')
@@ -31,7 +31,7 @@ local badAuthThrottleThreshold = 5
 
 --Allow for occasional MyQ errors
 local consecutiveFailureCount = 0
-local consecutiveFailureThreshold = 10
+local consecutiveFailureThreshold = 5
 
 --Handle skipping a refresh iteration if a command was just issued
 local commandIsPending = false
@@ -47,6 +47,10 @@ end
 ------------------
 -- Refresh command
 function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
+
+  if skipScan == undefined then
+    skipScan = 0
+  end
 
   if commandIsPending == true then
     log.info('Skipping refresh to let command settle.')
@@ -316,25 +320,35 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
       myQController:emit_event(myqStatusCap.statusText(newStatus))
     end
 
-  elseif code == 401 then
-    --Update all devices to show invalid auth
-    local device_list = driver:get_devices() --Grab existing devices
-        for _, device in ipairs(device_list) do
-          device:emit_event(myqStatusCap.statusText('MyQ login failed'))
-        end
-    authIsBad = true
-    return
+  -- elseif code == 401 then
+  --   --Update all devices to show invalid auth
+  --   local device_list = driver:get_devices() --Grab existing devices
+  --       for _, device in ipairs(device_list) do
+  --         device:emit_event(myqStatusCap.statusText('MyQ login failed'))
+  --       end
+  --   authIsBad = true
+  --   return
 
   else
 
-    --The MyQ API is unreliable. Allow up to 10 failures in a row before we display failure
+    --The MyQ API is unreliable. Allow for a few failures in a row before we display failure
+    log.info('Failure count ' ..consecutiveFailureCount)
     consecutiveFailureCount = consecutiveFailureCount + 1
     if consecutiveFailureCount > consecutiveFailureThreshold then
 
+      --log.info('Server appears down')
       --Update all devices to show server offline
       local offlineStatus = 'Error: MyQ Bridge Offline: ' ..myQController.model
 
-      --500 errors mean the bridge server is still up but having MyQ issues
+      --401 means the bridge server is up but cannot login to MyQ
+      if code == 401 then
+        log.info(code)
+        offlineStatus = 'Error: Bridge server failed to login to MyQ: ' ..table.concat(res_body)
+        skipScan = 1
+        authIsBad = true
+      end
+
+      --500 errors mean the bridge server is up and logged in but cannot refresh MyQ devices
       if code == 500 then
         offlineStatus = 'Error: Bridge server unable to refresh MyQ devices: ' ..table.concat(res_body)
         skipScan = 1
@@ -357,19 +371,22 @@ function command_handler.refresh(driver, callingDevice, skipScan, firstAuth)
           device:emit_event(myqStatusCap.statusText(offlineStatus))
         end
       end
+
+      if (skipScan ~= 1) then
+        local scanReason = ''
+        if code ~= undefined then
+          scanReason = 'last result: ' ..code
+        end
+        log.info('Doing broadcast' ..skipScan)
+        doBroadcast(driver, device, myQController, scanReason)
+      end
+
     end
 
     --If refresh failed with no response at all, try a UDP search to try and auto detect the server (maybe the IP or port changed)
     log.error('Refresh Failed.')
 
-    if (skipScan ~= 1) then
-      local scanReason = ''
-      if code ~= undefined then
-        scanReason = 'last result: ' ..code
-      end
 
-      doBroadcast(driver, device, myQController, scanReason)
-    end
   end
 end
 
