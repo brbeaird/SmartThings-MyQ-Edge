@@ -1,4 +1,4 @@
-var port = process.env.MYQ_SERVER_PORT || 0
+var port = process.env.MYQ_SERVER_PORT || 8090
 const { version: VERSION } = require('./package.json');
 const axios = require('axios');
 var express = require('express');
@@ -13,13 +13,12 @@ var myQDeviceMap = {} //Local cache of devices and their statuses
 var searchPending = false;
 var updateAvailable = false;
 var reAuth = true;
-var region = 'east';
 
 const ssdpId = 'urn:SmartThingsCommunity:device:MyQController' //Used in SSDP auto-discovery
 
 
 //Set credentials on myq object (these are always passed-in from calls from the ST hub)
-function myqLogin(email, password){
+async function validateMyqLogin(email, password){
 
   //Handle missing info
   if (!email || !password){
@@ -35,19 +34,7 @@ function myqLogin(email, password){
     myqPassword = password;
   }
 
-  //Connect
-  if (reAuth){
-    log(`Initializing connection to MyQ-${region}.`);
-    myq = new myQApi.myQApi(email, password, undefined, region);
-  }
-
-  reAuth = false;
   return true;
-}
-
-function toggleRegion(){
-  reAuth = true;
-  region = region === 'east' ? 'west' : 'east'
 }
 
 /**Exposed Express routes */
@@ -55,21 +42,32 @@ function toggleRegion(){
 //Gets devices
 app.post('/devices', async (req, res) => {
   try {
-    if (!myqLogin(req.body.auth.email, req.body.auth.password)){
+
+    let email = req.body.auth.email;
+    let password = req.body.auth.password;
+
+    if (!validateMyqLogin(email, password)){
       return res.sendStatus(401);
     }
-    let refreshResult = await myq.refreshDevices();
-    if (!refreshResult){
-      toggleRegion();
-      if (!myq.accessToken){
-        log(`MyQ login failed`, 1);
-        return res.sendStatus(401);
-      }
-      else{
-        log(`Refresh failed`, 1);
 
-        throw new Error('refresh failed');
-      }
+    //Connect. Note that the login call automatically calls refresh
+    if (reAuth){
+      myq = new myQApi.myQApi()
+      await myq.login(email, password);
+      reAuth = false;
+    }
+    else{
+      await myq.refreshDevices();
+    }
+
+    if (!myq.accessToken){
+      log(`MyQ login failed`, 1);
+      return res.sendStatus(401);
+    }
+
+    if (myq.apiReturnStatus != 200){
+      log(`Refresh failed`, 1);
+      throw new Error('refresh failed');
     }
 
     //Check for devices
