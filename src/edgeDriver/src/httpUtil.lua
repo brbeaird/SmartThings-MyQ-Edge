@@ -6,7 +6,7 @@ local http = cosock2.asyncify "socket.http"
 local log = require('log')
 
 local http_handler = {}
-http.TIMEOUT = 5
+http.TIMEOUT = 15
 
 ------------------------
 -- Send LAN HTTP Request
@@ -23,7 +23,7 @@ function http_handler.send_lan_command(url, method, path, body)
       headers={
         ['Content-Type'] = 'application/json',
         ["Content-Length"] = #jsonBody;
-      },      
+      },
       source=ltn12.source.string(jsonBody),
       sink=ltn12.sink.table(res_body)
     })
