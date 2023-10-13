@@ -6,7 +6,13 @@
  - Update to myq library to 7.5.2
  - Improve error handling and logging
 
-## 1.0.4 (2023-02-01)
+ ## 1.0.3 (2023-09-06)
+
+### Updated
+ - Updated myQ library
+ - Clarified logging and version text
+
+## 1.0.2 (2023-02-01)
 
 ### Added
  - Added version check
