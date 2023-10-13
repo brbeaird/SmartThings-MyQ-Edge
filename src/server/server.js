@@ -81,6 +81,14 @@ app.post('/devices', async (req, res) => {
       }
       res.send(responseToHub);
       for (let device of myq.devices){
+        let cachedDevice = myQDeviceMap[device.serial_number];
+          if (cachedDevice){
+            let latestState = device.state.door_state ?? device.state.lamp_state;
+            let oldState = cachedDevice.state.door_state ?? device.state.lamp_state;
+            if (oldState != latestState && latestState){
+              log(`Updating ${cachedDevice.name} state from ${oldState} to ${latestState}`);
+            }
+          }
         myQDeviceMap[device.serial_number] = device;
       }
     }
