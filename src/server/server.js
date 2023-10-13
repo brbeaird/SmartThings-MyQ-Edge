@@ -1,4 +1,4 @@
-var port = process.env.MYQ_SERVER_PORT || 0
+var port = process.env.MYQ_SERVER_PORT || 8090
 const { version: VERSION } = require('./package.json');
 const axios = require('axios');
 var express = require('express');
@@ -61,7 +61,7 @@ app.post('/devices', async (req, res) => {
     }
 
     if (!myq.accessToken){
-      log(`MyQ login failed`, 1);
+      log(`MyQ login failed: ${myq.apiReturnStatus}`, 1);
       return res.sendStatus(401);
     }
 
@@ -89,7 +89,7 @@ app.post('/devices', async (req, res) => {
               log(`Updating ${cachedDevice.name} state from ${oldState} to ${latestState}`);
             }
           }
-        myQDeviceMap[device.serial_number] = device;
+        myQDeviceMap[device.serial_number] = JSON.parse(JSON.stringify(device));
       }
     }
     else{
@@ -109,11 +109,19 @@ app.post('/:devId/control', async (req, res) => {
       log(`No active MyQ login session`, 1);
       return res.status(500).send('No myQ login token. Please try again after successful device refresh.')
     }
-    let result = await myq.execute(myQDeviceMap[req.params.devId], req.body.command)
+
+    let device = myQDeviceMap[req.params.devId];
+    if (!device){
+      return res.status(500).send('Error sending command - device not known. Please try again.')
+    }
+
+    log(`Sending ${req.body.command} command for ${device.name}`);
+    let result = await myq.execute(device, req.body.command)
     if (result){
       res.sendStatus(200);
     }
     else{
+      log(`Error Sending ${req.body.command} command for ${device.name}`, 1);
       res.status(500).send('Error sending command. Please try again.')
     }
   } catch (error) {
