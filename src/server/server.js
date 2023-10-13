@@ -1,4 +1,4 @@
-var port = process.env.MYQ_SERVER_PORT || 8090
+var port = process.env.MYQ_SERVER_PORT || 0
 const { version: VERSION } = require('./package.json');
 const axios = require('axios');
 var express = require('express');
@@ -84,7 +84,7 @@ app.post('/devices', async (req, res) => {
         let cachedDevice = myQDeviceMap[device.serial_number];
           if (cachedDevice){
             let latestState = device.state.door_state ?? device.state.lamp_state;
-            let oldState = cachedDevice.state.door_state ?? device.state.lamp_state;
+            let oldState = cachedDevice.state.door_state ?? cachedDevice.state.lamp_state;
             if (oldState != latestState && latestState){
               log(`Updating ${cachedDevice.name} state from ${oldState} to ${latestState}`);
             }
