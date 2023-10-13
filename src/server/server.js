@@ -1,4 +1,4 @@
-var port = process.env.MYQ_SERVER_PORT || 8090
+var port = process.env.MYQ_SERVER_PORT || 0
 const { version: VERSION } = require('./package.json');
 const axios = require('axios');
 var express = require('express');
