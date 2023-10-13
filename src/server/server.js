@@ -61,7 +61,7 @@ app.post('/devices', async (req, res) => {
     }
 
     if (!myq.accessToken){
-      log(`MyQ login failed`, 1);
+      log(`MyQ login failed: ${myq.apiReturnStatus}`, 1);
       return res.sendStatus(401);
     }
 
@@ -81,7 +81,15 @@ app.post('/devices', async (req, res) => {
       }
       res.send(responseToHub);
       for (let device of myq.devices){
-        myQDeviceMap[device.serial_number] = device;
+        let cachedDevice = myQDeviceMap[device.serial_number];
+          if (cachedDevice){
+            let latestState = device.state.door_state ?? device.state.lamp_state;
+            let oldState = cachedDevice.state.door_state ?? cachedDevice.state.lamp_state;
+            if (oldState != latestState && latestState){
+              log(`Updating ${cachedDevice.name} state from ${oldState} to ${latestState}`);
+            }
+          }
+        myQDeviceMap[device.serial_number] = JSON.parse(JSON.stringify(device));
       }
     }
     else{
@@ -97,15 +105,23 @@ app.post('/devices', async (req, res) => {
 //Controls a device
 app.post('/:devId/control', async (req, res) => {
   try {
-    log(`Setting ${myQDeviceMap[req.params.devId].name} to ${req.body.command}`);
-    if (!myqLogin(req.body.auth.email, req.body.auth.password)){
-      return res.sendStatus(401);
+    if (!myq?.accessToken){
+      log(`No active MyQ login session`, 1);
+      return res.status(500).send('No myQ login token. Please try again after successful device refresh.')
     }
-    let result = await myq.execute(myQDeviceMap[req.params.devId], req.body.command)
+
+    let device = myQDeviceMap[req.params.devId];
+    if (!device){
+      return res.status(500).send('Error sending command - device not known. Please try again.')
+    }
+
+    log(`Sending ${req.body.command} command for ${device.name}`);
+    let result = await myq.execute(device, req.body.command)
     if (result){
       res.sendStatus(200);
     }
     else{
+      log(`Error Sending ${req.body.command} command for ${device.name}`, 1);
       res.status(500).send('Error sending command. Please try again.')
     }
   } catch (error) {
