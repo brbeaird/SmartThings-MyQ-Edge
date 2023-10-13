@@ -97,9 +97,9 @@ app.post('/devices', async (req, res) => {
 //Controls a device
 app.post('/:devId/control', async (req, res) => {
   try {
-    log(`Setting ${myQDeviceMap[req.params.devId].name} to ${req.body.command}`);
-    if (!myqLogin(req.body.auth.email, req.body.auth.password)){
-      return res.sendStatus(401);
+    if (!myq?.accessToken){
+      log(`No active MyQ login session`, 1);
+      return res.status(500).send('No myQ login token. Please try again after successful device refresh.')
     }
     let result = await myq.execute(myQDeviceMap[req.params.devId], req.body.command)
     if (result){
