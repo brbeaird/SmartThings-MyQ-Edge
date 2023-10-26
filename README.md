@@ -1,3 +1,5 @@
+# Update 2023-10-26: MyQ has made some changes that cause frequent API errors for this integration. A fix is in process but could take a week or so to develop.
+
 # SmartThings-MyQ-Edge
 SmartThings/MyQ Integration via Edge
 
