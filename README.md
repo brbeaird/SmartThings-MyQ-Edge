@@ -1,4 +1,4 @@
-# Update 2023-10-26: MyQ has made some changes that cause frequent API errors for this integration. A fix is in process but could take a week or so to develop.
+# Sadly, this project has been shut down. MyQ implemented changes that lock down their API to a level that make this integration (and several others) impossible. It was a fun ride while it lasted. See: Meross as a possible alternative.
 
 # SmartThings-MyQ-Edge
 SmartThings/MyQ Integration via Edge
